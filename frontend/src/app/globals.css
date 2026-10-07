@@ -1,0 +1,12 @@
+:root { color-scheme: light; --ink: #332922; --muted: #81756c; --rose: #9b665e; --paper: #fbf8f3; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { background: radial-gradient(ellipse at 50% 0%, #f1e4d9 0%, var(--paper) 58%); color: var(--ink); font-family: "Aptos", "Segoe UI", sans-serif; }
+.shell { min-height: 100vh; padding: 12vh 24px 32px; display: flex; align-items: center; flex-direction: column; text-align: center; }
+.mark { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #cdb5a5; border-radius: 50%; color: var(--rose); font-family: Georgia, serif; font-size: 17px; }
+.eyebrow { margin: 26px 0 18px; color: var(--rose); font-size: 11px; font-weight: 600; letter-spacing: .24em; }
+h1 { max-width: 700px; margin: 0; font: 500 clamp(44px, 8vw, 76px)/1.08 Georgia, serif; letter-spacing: -.035em; }
+.intro { max-width: 455px; margin: 22px 0 32px; color: var(--muted); font-size: 16px; line-height: 1.75; }
+.status { display: flex; align-items: center; gap: 9px; padding: 11px 16px; border: 1px solid #eadfd5; border-radius: 999px; background: #ffffff80; color: #6f645c; font-size: 13px; }
+.status span { width: 7px; height: 7px; border-radius: 50%; background: #74917b; }
+footer { margin-top: auto; padding-top: 64px; color: #a2988f; font-size: 12px; letter-spacing: .04em; }
