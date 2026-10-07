@@ -1,4 +1,4 @@
-# Make My Marriage
+# Plan Event
 
 Foundation scaffold for a wedding planning platform. The repository starts from the architecture and product documents in [`docs/`](docs/).
 
