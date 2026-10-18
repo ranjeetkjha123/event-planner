@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./foundation.css";
 
 export const metadata: Metadata = {
   title: "Make My Marriage | A wedding planned together",

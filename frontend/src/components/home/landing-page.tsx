@@ -52,15 +52,15 @@ export function LandingPage() {
     <header className="site-header">
       <Brand />
       <nav className="desktop-nav" aria-label="Main navigation">{navigation.map(([label, href], i) => <a className={i === 0 ? "active" : ""} href={href} key={label}>{label}</a>)}</nav>
-      <div className="header-actions"><a className="button button-primary header-start" href="#account">Get Started</a><a className="button button-outline header-signin" href="#account">Sign In</a></div>
-      <details className="mobile-menu"><summary aria-label="Open navigation menu"><span aria-hidden="true">☰</span></summary><nav aria-label="Mobile navigation">{navigation.map(([label, href]) => <a href={href} key={label}>{label}</a>)}<a href="#account">Get Started / Sign In</a></nav></details>
+      <div className="header-actions"><a className="button button-primary header-start" href="/signup">Get Started</a><a className="button button-outline header-signin" href="/login">Sign In</a></div>
+      <details className="mobile-menu"><summary aria-label="Open navigation menu"><span aria-hidden="true">☰</span></summary><nav aria-label="Mobile navigation">{navigation.map(([label, href]) => <a href={href} key={label}>{label}</a>)}<a href="/signup">Get Started</a><a href="/login">Sign In</a></nav></details>
     </header>
     <main id="main">
       <section className="hero" id="home">
         <div className="hero-copy"><p className="eyebrow"><span>✿</span> MADE FOR YOUR BIG, BEAUTIFUL DAY</p>
           <h1>Plan. Organize.<br />Celebrate.<br /><em>Your Dream Indian Wedding.</em></h1>
           <p className="hero-description">Make My Marriage is an all-in-one wedding management platform for Indian weddings. Manage your events, guests, expenses, tasks, shopping, vendors, invitations, photos and more — all in one place.</p>
-          <div className="hero-actions"><a className="button button-primary" href="#account">Create Your Wedding <Arrow /></a><a className="button button-video" href="#video-note"><span className="play-icon">▶</span> Watch Video</a></div>
+          <div className="hero-actions"><a className="button button-primary" href="/signup">Create Your Wedding <Arrow /></a><a className="button button-video" href="#video-note"><span className="play-icon">▶</span> Watch Video</a></div>
           <div className="trust-notes"><span><i>✓</i> Free to start</span><span><i>✓</i> One account per wedding</span><span><i>✓</i> No guest login required</span></div>
         </div>
         <div className="hero-visual"><Image src="/images/indian-wedding-hero.png" alt="A joyful Indian couple in traditional wedding attire beneath marigold decorations" fill priority sizes="(max-width: 760px) 100vw, 56vw" />
@@ -79,7 +79,7 @@ export function LandingPage() {
           <article><span className="step-number">02</span><span className="step-icon" aria-hidden="true">✿</span><h3>Set up your wedding</h3><p>Add your details, create celebrations and invite your family members.</p></article><span className="step-arrow" aria-hidden="true">→</span>
           <article><span className="step-number">03</span><span className="step-icon" aria-hidden="true">✳</span><h3>Plan together</h3><p>Manage the details in one place and make room to enjoy your day.</p></article></div>
       </section>
-      <section className="account-note" id="account"><span aria-hidden="true">♡</span><div><h2>Start your wedding workspace</h2><p>The documented account flow uses email and password. Sign-in and onboarding routes are not available from this homepage build yet.</p></div><a className="button button-outline" href="#home">Homepage preview</a></section>
+      <section className="account-note" id="account"><span aria-hidden="true">♡</span><div><h2>Start your wedding workspace</h2><p>Create an account with email and password, then set up your wedding and invite family to plan together.</p></div><a className="button button-primary" href="/signup">Create account</a><a className="button button-outline" href="/login">Sign in</a></section>
       <p className="video-note" id="video-note">A product overview video will appear here when one is available.</p>
     </main>
     <footer className="site-footer"><Brand /><p>One shared place for your wedding plans.</p><span>© Make My Marriage</span></footer>

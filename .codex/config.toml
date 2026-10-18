@@ -1,0 +1,4 @@
+[mcp_servers.stitch]
+url = "https://stitch.googleapis.com/mcp"
+http_headers_helper = "powershell -NoProfile -ExecutionPolicy Bypass -File .codex/stitch-headers.ps1"
+enabled_tools = ["list_projects", "get_project", "list_screens", "get_screen"]

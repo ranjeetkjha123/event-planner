@@ -1,6 +1,6 @@
 # Make My Marriage — Project Status
 
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-18
 
 ## Workspace audit — 2026-10-17
 
@@ -26,11 +26,13 @@ System Design, Database Design, and API Design documents.
 
 ## Current position
 
-The source files present in this checkout are the public homepage, its layout and
-styles, and the Next.js health Route Handler. The homepage is illustrative UI;
-it does not provide account signup/sign-in, wedding onboarding, a live demo
-workspace, or product data persistence. The health endpoint returns application
-health only and does not verify MongoDB or provider connectivity.
+The source files present in this checkout include the public homepage, account
+entry screens, a password recovery screen, a three-step wedding setup UI, and
+the Next.js health Route Handler. Account and wedding setup screens are
+interactive prototypes only: there is no authentication, database persistence,
+invitation delivery, or product workflow backend. The homepage dashboard remains
+illustrative. The health endpoint returns application health only and does not
+verify MongoDB or provider connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
 work, but the account, wedding, planning, guest, and gallery milestones cannot
@@ -56,6 +58,7 @@ monolith startup path described by the system design.
 | Gallery R2 setup | Configured — development storage verified | 2026-09-18 |
 | Organiser photo gallery | Implemented — source publication authorised | 2026-09-18 |
 | Public marketing homepage rebuild in this checkout | Revised against Stitch — illustrative UI | 2026-10-17 |
+| Account and wedding setup screens | In progress — interactive UI prototype only | 2026-10-18 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -931,6 +934,46 @@ see milestone 15. The setup details below preserve the original setup record.
 - Validation on 2026-10-17: npm run lint, npm run typecheck, and npm run build passed. Browser inspection confirmed the page content and local hero image render.
 - Boundaries: the dashboard values are static sample data; feature strip items describe product scope and are not proof that those modules exist in this checkout. No database, authentication, or product API behavior was added.
 
+## 17. Account and wedding setup screen prototype
+
+**Status:** In progress — interactive UI prototype; no working backend
+
+**Recorded on:** 2026-10-18
+
+### Implemented
+
+- Added email-and-password sign-in and signup screens, plus a password-reset
+  request screen, following the PRD/API design rather than the Stitch Google and
+  email/mobile one-time-code mockup.
+- Connected homepage sign-in and start-planning actions to the account routes.
+- Added a responsive wedding setup wizard in the documented order: couple and
+  wedding details, co-planners, then events and traditions. It supports local
+  step navigation, adding/removing draft planners, selecting suggested events,
+  and entering custom event names.
+- Kept form values in page memory only. No account, session, wedding, event, or
+  invitation data is sent or persisted.
+
+### Validation
+
+- `npx eslint src/app src/components eslint.config.mjs` passed, and
+  `npx tsc --noEmit --incremental false` passed.
+- The local development server returned HTTP 200 for `/`, `/login`, `/signup`,
+  `/forgot-password`, and `/onboarding`; browser inspection confirmed the new
+  page content and initial onboarding step order.
+- `npm run build` was attempted but could not write Next.js `.next/trace`
+  (`EPERM`); production build validation remains unconfirmed. The standard
+  incremental typecheck also hit a build-info write-permission error; the
+  no-incremental typecheck above passed.
+
+### Remaining work and limitations
+
+- Implement server-backed auth, sessions, password reset delivery, MongoDB
+  persistence, atomic wedding and Admin membership creation, member invitations,
+  wedding event persistence, and authenticated routing before treating these
+  screens as product workflows.
+- PRD journey order and the current Stitch step order differ. This prototype
+  follows the PRD order: invite members before setting up events.
+
 ## Upcoming development
 
 The homepage milestone is complete for its stated scope: responsive marketing UI
@@ -941,13 +984,19 @@ later phase is marked complete here.
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
-| 1. Foundation | Next — not started | Authentication, wedding creation, members, dashboard shell |
+| 1. Foundation | In progress — UI prototype only | Auth entry and recovery screens; couple → members → events setup UI. Backend, persistence, dashboard and authorization remain pending. |
 | 2. Planning | Pending | Events and tasks |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
 | 5. Wedding Experience | Pending | Wedding website, themes, YouTube livestream |
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
+
+**Recommended next increment:** implement and test server-backed email/password
+signup, login, logout, current-user lookup, and secure sessions. Then connect
+wedding creation and membership setup to MongoDB before building the dashboard
+shell. Keep the documented one-user/one-wedding rule and Admin/Manager
+permissions intact.
 
 For each feature increment, update this file in the same change: record its
 status and date, implemented scope, validation performed, and remaining work or
