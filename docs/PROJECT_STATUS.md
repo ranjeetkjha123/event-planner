@@ -28,11 +28,11 @@ System Design, Database Design, and API Design documents.
 
 The source files present in this checkout include the public homepage, account
 entry screens, a password recovery screen, a three-step wedding setup UI, and
-the Next.js health Route Handler. Account and wedding setup screens are
-interactive prototypes only: there is no authentication, database persistence,
-invitation delivery, or product workflow backend. The homepage dashboard remains
-illustrative. The health endpoint returns application health only and does not
-verify MongoDB or provider connectivity.
+the Next.js health Route Handler. Email/password sign-in now has a MongoDB-backed
+login API and server-side session cookie; signup, logout, password reset, wedding
+setup persistence, and the product dashboard remain unimplemented. The health
+endpoint returns application health only and does not verify MongoDB or provider
+connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
 work, but the account, wedding, planning, guest, and gallery milestones cannot
@@ -59,6 +59,7 @@ monolith startup path described by the system design.
 | Organiser photo gallery | Implemented — source publication authorised | 2026-09-18 |
 | Public marketing homepage rebuild in this checkout | Revised against Stitch — illustrative UI | 2026-10-17 |
 | Account and wedding setup screens | In progress — interactive UI prototype only | 2026-10-18 |
+| Email/password sign-in | In progress — API/session implementation; database connection not verified | 2026-10-18 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -974,6 +975,54 @@ see milestone 15. The setup details below preserve the original setup record.
 - PRD journey order and the current Stitch step order differ. This prototype
   follows the PRD order: invite members before setting up events.
 
+## 18. Email/password sign-in foundation
+
+**Status:** In progress — implementation present; live database authentication
+not verified
+
+**Recorded on:** 2026-10-18
+
+### Implemented
+
+- Connected the login form to `POST /api/auth/login`, with Zod request
+  validation, normalized email lookup, bcrypt password verification, and a
+  generic invalid-credentials response.
+- Added MongoDB User, Session, WeddingMembership, and minimal Wedding read
+  models needed by the login response and current-user endpoint.
+- Created random session cookies with HttpOnly, SameSite=Lax, production Secure
+  behavior, 30-day expiry, and HMAC-SHA-256 token storage using
+  `AUTH_TOKEN_PEPPER`.
+- The database/API docs describe session token SHA-256, while `AGENTS.md`
+  requires HMAC-SHA-256 with the pepper. This increment follows the repository
+  instruction; reconcile the design wording in a documentation update.
+- Added the documented `GET /api/auth/me` endpoint to verify a session and
+  return current user and membership context without exposing token hashes.
+- Loaded the repository-root `.env.local` in development because the Next.js
+  app runs from `frontend/`. A local 256-bit pepper was generated when the
+  existing ignored setting was empty; its value is not committed.
+
+### Validation
+
+- `npx eslint src` passed and `npx tsc --noEmit --incremental false` passed.
+- The live `/api/auth/me` endpoint returned 401 without a session, as designed.
+- A database-backed invalid-login request returned a generic 500 because the
+  configured MongoDB connection string is rejected as invalid by the MongoDB
+  driver. Successful credentials, session persistence, and cookie round-trip
+  remain unverified until the connection string is corrected.
+- The installed Node runtime is v21.5.0, below this project’s declared minimum
+  of v22.13.0; run the application with the supported Node version before
+  treating runtime verification as complete.
+
+### Remaining work and limitations
+
+- Correct the local `MONGODB_URI`, then verify successful and invalid sign-in,
+  session cookie round-trip, expiry, and the current-user response against the
+  configured database.
+- Implement signup so a new user can create a password and then use sign-in;
+  signup, logout, rate limiting, and password reset remain pending.
+- Add server-side authentication guards before exposing private wedding APIs or
+  screens. Do not treat the current onboarding prototype as persisted data.
+
 ## Upcoming development
 
 The homepage milestone is complete for its stated scope: responsive marketing UI
@@ -984,7 +1033,7 @@ later phase is marked complete here.
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
-| 1. Foundation | In progress — UI prototype only | Auth entry and recovery screens; couple → members → events setup UI. Backend, persistence, dashboard and authorization remain pending. |
+| 1. Foundation | In progress — sign-in foundation; database configuration blocks runtime verification | Login API/session and current-user lookup; signup, logout, persisted onboarding, dashboard and authorization remain pending. |
 | 2. Planning | Pending | Events and tasks |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
@@ -992,11 +1041,12 @@ later phase is marked complete here.
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
 
-**Recommended next increment:** implement and test server-backed email/password
-signup, login, logout, current-user lookup, and secure sessions. Then connect
-wedding creation and membership setup to MongoDB before building the dashboard
-shell. Keep the documented one-user/one-wedding rule and Admin/Manager
-permissions intact.
+**Recommended next increment:** correct and verify the local MongoDB connection,
+then implement signup and logout using the sign-in session infrastructure. Add
+the necessary rate limiting and focused auth/tenant-isolation coverage before
+exposing private workflows. Then persist wedding creation and memberships before
+building the dashboard shell. Keep the documented one-user/one-wedding rule and
+Admin/Manager permissions intact.
 
 For each feature increment, update this file in the same change: record its
 status and date, implemented scope, validation performed, and remaining work or

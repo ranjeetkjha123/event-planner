@@ -36,11 +36,62 @@ const copy = {
 
 export function AuthScreen({ mode }: { mode: AuthMode }) {
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const text = copy[mode];
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("This screen is ready for review. Account, session, and password-reset services are not connected yet; your information has not been sent or saved.");
+    setMessage("");
+    setIsSuccess(false);
+
+    if (mode !== "login") {
+      setMessage("Account creation and password recovery are the next authentication steps.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password"),
+        }),
+      });
+      const result = await response.json() as {
+        data?: { user?: { name?: string }; hasWedding?: boolean };
+        error?: { message?: string };
+      };
+
+      if (!response.ok) {
+        setMessage(result.error?.message ?? "Unable to sign in right now.");
+        return;
+      }
+
+      const currentUserResponse = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!currentUserResponse.ok) {
+        setMessage("Your sign-in could not be confirmed. Please try again.");
+        return;
+      }
+
+      const currentUserResult = await currentUserResponse.json() as {
+        data?: { user?: { name?: string }; membership?: { role?: string } | null };
+      };
+      setIsSuccess(true);
+      setMessage(
+        currentUserResult.data?.membership
+          ? `Welcome back${currentUserResult.data.user?.name ? `, ${currentUserResult.data.user.name}` : ""}. Your account is signed in.`
+          : "You’re signed in. Set up your wedding workspace to continue.",
+      );
+    } catch {
+      setMessage("Unable to reach the sign-in service. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -58,14 +109,14 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           <p className="foundation-eyebrow">{mode === "forgot" ? "PASSWORD HELP" : "MAKE MY MARRIAGE"}</p>
           <h2>{mode === "login" ? "Sign in with email" : text.title}</h2>
           <p className="auth-card-intro">{mode === "login" ? "Use the email and password on your account." : text.description}</p>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(event) => void handleSubmit(event)}>
             {mode === "signup" && <label>Your name<input autoComplete="name" name="name" placeholder="Full name" required /></label>}
             <label>Email address<input autoComplete="email" name="email" type="email" placeholder="you@example.com" required /></label>
             {mode !== "forgot" && <label>Password<input autoComplete={mode === "login" ? "current-password" : "new-password"} name="password" type="password" minLength={8} placeholder="At least 8 characters" required /></label>}
             {mode === "login" && <a className="auth-inline-link" href="/forgot-password">Forgot password?</a>}
-            <button className="button button-primary auth-submit" type="submit">{text.button}<span aria-hidden="true">→</span></button>
+            <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : text.button}<span aria-hidden="true">→</span></button>
           </form>
-          {message && <p className="prototype-message" role="status">{message}</p>}
+          {message && <p className="prototype-message" role={isSuccess ? "status" : "alert"}>{message}</p>}
           <div className="auth-divider"><span>PRIVATE BY DESIGN</span></div>
           <p className="auth-assurance"><span aria-hidden="true">✓</span> Guests can RSVP without creating an account.</p>
           <p className="auth-switch">{text.foot} <a href={text.footHref}>{text.footLink}</a></p>
