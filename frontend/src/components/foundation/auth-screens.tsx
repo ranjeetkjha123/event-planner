@@ -45,19 +45,20 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
     setMessage("");
     setIsSuccess(false);
 
-    if (mode !== "login") {
-      setMessage("Account creation and password recovery are the next authentication steps.");
+    if (mode === "forgot") {
+      setMessage("Password recovery will be available in a later authentication update.");
       return;
     }
 
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
     try {
-      const response = await fetch("/api/auth/login", {
+      const formData = new FormData(event.currentTarget);
+      const response = await fetch(mode === "login" ? "/api/auth/login" : "/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(mode === "signup" ? { name: formData.get("name") } : {}),
           email: formData.get("email"),
           password: formData.get("password"),
         }),
@@ -74,21 +75,15 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
       const currentUserResponse = await fetch("/api/auth/me", { cache: "no-store" });
       if (!currentUserResponse.ok) {
-        setMessage("Your sign-in could not be confirmed. Please try again.");
+        setMessage("Your account could not be confirmed. Please try again.");
         return;
       }
 
-      const currentUserResult = await currentUserResponse.json() as {
-        data?: { user?: { name?: string }; membership?: { role?: string } | null };
-      };
+      await currentUserResponse.json();
       setIsSuccess(true);
-      setMessage(
-        currentUserResult.data?.membership
-          ? `Welcome back${currentUserResult.data.user?.name ? `, ${currentUserResult.data.user.name}` : ""}. Your account is signed in.`
-          : "You’re signed in. Set up your wedding workspace to continue.",
-      );
+      window.location.assign("/onboarding");
     } catch {
-      setMessage("Unable to reach the sign-in service. Please try again.");
+      setMessage("Unable to reach the account service. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -110,11 +105,11 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           <h2>{mode === "login" ? "Sign in with email" : text.title}</h2>
           <p className="auth-card-intro">{mode === "login" ? "Use the email and password on your account." : text.description}</p>
           <form onSubmit={(event) => void handleSubmit(event)}>
-            {mode === "signup" && <label>Your name<input autoComplete="name" name="name" placeholder="Full name" required /></label>}
-            <label>Email address<input autoComplete="email" name="email" type="email" placeholder="you@example.com" required /></label>
-            {mode !== "forgot" && <label>Password<input autoComplete={mode === "login" ? "current-password" : "new-password"} name="password" type="password" minLength={8} placeholder="At least 8 characters" required /></label>}
+            {mode === "signup" && <label>Your name<input autoComplete="name" name="name" placeholder="Full name" minLength={2} maxLength={120} required /></label>}
+            <label>Email address<input autoComplete="email" name="email" type="email" maxLength={254} placeholder="you@example.com" required /></label>
+            {mode !== "forgot" && <label>Password<input autoComplete={mode === "login" ? "current-password" : "new-password"} name="password" type="password" minLength={mode === "signup" ? 12 : 1} maxLength={128} placeholder={mode === "signup" ? "At least 12 characters" : "Your password"} required /></label>}
             {mode === "login" && <a className="auth-inline-link" href="/forgot-password">Forgot password?</a>}
-            <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : text.button}<span aria-hidden="true">→</span></button>
+            <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? (mode === "login" ? "Signing in…" : "Creating account…") : text.button}<span aria-hidden="true">→</span></button>
           </form>
           {message && <p className="prototype-message" role={isSuccess ? "status" : "alert"}>{message}</p>}
           <div className="auth-divider"><span>PRIVATE BY DESIGN</span></div>

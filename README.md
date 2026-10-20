@@ -1,19 +1,18 @@
-# Plan Event
+# Make My Marriage
 
-Foundation scaffold for a wedding planning platform. The repository starts from the architecture and product documents in [`docs/`](docs/).
+Starter scaffold for the Make My Marriage wedding-planning platform. Product
+requirements and architecture are defined in [`docs/`](docs/).
 
 ## Architecture
 
-- `frontend/src/`: Next.js App Router with TypeScript. Routes live in `src/app`; shared UI and future feature modules belong under `src/components` and `src/modules`. It calls the backend and must never connect directly to MongoDB.
-- `backend/src/`: FastAPI application package. Keep API routes, feature modules, and server infrastructure under this source root. Private data access must be authorized and scoped by `wedding_id` in this service.
+- `frontend/src/`: Next.js App Router with TypeScript. The approved design is a modular monolith: Route Handlers, domain modules, and server infrastructure live in this application. The browser never connects directly to MongoDB.
 - MongoDB Atlas is the planned production database. `docker-compose.yml` provides MongoDB for local development only.
-- Google Cloud Storage is the planned private media store. Uploads should use short-lived signed URLs; media bytes do not belong in MongoDB.
-- Integrations (Google OAuth, Places, Resend, YouTube and GCS) are documented targets, not implemented in this scaffold.
+- Cloudflare R2 is the documented media store. Uploads use short-lived signed URLs; media bytes do not belong in MongoDB.
+- Google OAuth, Places, Resend, YouTube, and R2 integrations must be implemented according to the design documents before they are treated as available.
 
 ## Requirements
 
 - Node.js 22.13 or newer and npm (the resolved toolchain includes packages that require Node 22).
-- Python 3.11 or newer.
 - Docker with the Compose plugin, only if you want the local MongoDB container.
 
 ## Run locally
@@ -24,20 +23,7 @@ Start MongoDB if needed:
 docker compose up -d mongodb
 ```
 
-Run the API in one terminal:
-
-```sh
-cd backend
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -r requirements.txt
-uvicorn app.main:app --reload --app-dir ./src
-```
-
-The scaffold API health endpoint is `http://localhost:8000/api/v1/health` and interactive API docs are at `http://localhost:8000/docs`.
-
-Run the frontend in another terminal:
+Run the application:
 
 ```sh
 cd frontend
@@ -45,11 +31,14 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The starter page is a placeholder and does not call the API yet. Frontend routes and source files live in `frontend/src/`.
+Open `http://localhost:3000`. The starter page is a placeholder. The basic
+application health endpoint is `http://localhost:3000/api/v1/health`.
 
 ## Environment variables
 
-No environment variables are required by the current scaffold. Copy `.env.example` to `.env` when beginning integration work. The listed names are planned configuration keys; settings are not yet wired to providers. Never commit secrets.
+The starter page and health endpoint need no environment variables. Copy
+`.env.example` to `.env` when beginning integration work. These planned
+configuration keys are not wired to the current scaffold. Never commit secrets.
 
 ## Quality commands
 
@@ -59,12 +48,7 @@ cd frontend
 npm run lint
 npm run typecheck
 npm run build
-
-# Backend (from backend/, with its virtual environment active)
-python -m compileall app
 ```
-
-No automated application tests exist yet. Add focused tests with the first implemented business modules.
 
 ## Initial implementation boundaries
 
@@ -72,4 +56,22 @@ This scaffold does not implement authentication, authorization, database models 
 
 ## Design-document note
 
-The PRD defines Admin and Member roles. The API and database designs also define Manager, with invitations restricted to Manager or Member. Resolve this role model before implementing invitation and authorization policies. The system design leaves the GCP compute product open; Cloud Run is an example, not a committed choice.
+The PRD describes Admin, Manager, and Member access in its detailed role rules. Keep role behavior aligned with the API and database designs when implementing authorization.
+# Google Stitch MCP (Codex)
+
+This repository includes a project-scoped Codex MCP connection to Google Stitch.
+It exposes read-only project and screen lookup tools, including screen retrieval
+for inspecting Stitch screenshots. It does not add Stitch credentials or code to
+the wedding application runtime.
+
+1. Copy `STITCH_API_KEY` from `.env.example` into the ignored project `.env.local`
+   file and set its value. Do not commit the key.
+2. Trust this project in Codex so its `.codex/config.toml` is loaded.
+3. Restart/reload the Codex session and approve/connect to the `stitch` MCP server.
+4. Ask Codex to list the Stitch projects, then retrieve screens from the target
+   project to inspect their screenshot references.
+
+The connection uses Google's `https://stitch.googleapis.com/mcp` endpoint. The
+local helper sends the key as `X-Goog-Api-Key` and prints only the HTTP header
+JSON required by Codex. `.env.local` is ignored by Git. Codex reads that file
+through the helper; the Next.js app does not consume `STITCH_API_KEY`.

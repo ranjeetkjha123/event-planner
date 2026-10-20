@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 
 import { login, InvalidCredentialsError } from "@/modules/auth/login-service";
 import { loginSchema } from "@/modules/auth/login-schema";
+import { checkAuthRateLimit } from "@/modules/auth/rate-limit-service";
+import { isSameOriginRequest } from "@/server/auth/same-origin";
 import { SESSION_COOKIE_NAME, SESSION_DURATION_SECONDS } from "@/server/auth/session-token";
 
 function errorResponse(
@@ -12,11 +14,15 @@ function errorResponse(
 ) {
   return Response.json(
     { error: { code, message, ...(details ? { details } : {}) } },
-    { status },
+    { status, headers: { "Cache-Control": "no-store" } },
   );
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return errorResponse(403, "FORBIDDEN", "This request could not be verified.");
+  }
+
   let body: unknown;
 
   try {
@@ -36,6 +42,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const rateLimit = await checkAuthRateLimit("login", parsed.data.email.toLowerCase());
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: { code: "RATE_LIMITED", message: "Too many sign-in attempts. Please try again shortly." } },
+        { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      );
+    }
+
     const result = await login(parsed.data);
     const cookieStore = await cookies();
 
@@ -48,12 +62,10 @@ export async function POST(request: Request) {
       expires: result.expiresAt,
     });
 
-    return Response.json({
-      data: {
-        user: result.user,
-        hasWedding: result.hasWedding,
-      },
-    });
+    return Response.json(
+      { data: { user: result.user, hasWedding: result.hasWedding } },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     if (error instanceof InvalidCredentialsError) {
       return errorResponse(401, "INVALID_CREDENTIALS", error.message);

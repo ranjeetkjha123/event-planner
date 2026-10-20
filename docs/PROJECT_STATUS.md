@@ -1,6 +1,6 @@
 # Make My Marriage — Project Status
 
-**Last updated:** 2026-10-18
+**Last updated:** 2026-10-20
 
 ## Workspace audit — 2026-10-17
 
@@ -15,9 +15,10 @@ only and does not establish database connectivity.
 
 The current docs define a Next.js modular monolith. The FastAPI package still
 present under `backend/` is a leftover scaffold that conflicts with that
-architecture and is not part of the documented app startup path. Authentication,
-MongoDB persistence, and product workflows remain unimplemented in this
-checkout. The public homepage is the first current product UI increment.
+architecture and is not part of the documented app startup path. The public
+homepage is the first current product UI increment; email/password accounts and
+MongoDB sessions are now implemented and have passed a live local smoke check.
+Wedding setup persistence and the other product workflows remain pending.
 
 This is the ongoing record of major development milestones. Read it before
 starting development and update it whenever a major feature is implemented or
@@ -28,18 +29,18 @@ System Design, Database Design, and API Design documents.
 
 The source files present in this checkout include the public homepage, account
 entry screens, a password recovery screen, a three-step wedding setup UI, and
-the Next.js health Route Handler. Email/password sign-in now has a MongoDB-backed
-login API and server-side session cookie; signup, logout, password reset, wedding
-setup persistence, and the product dashboard remain unimplemented. The health
-endpoint returns application health only and does not verify MongoDB or provider
-connectivity.
+the Next.js health Route Handler. Email/password signup, sign-in, logout, and
+current-session lookup use MongoDB-backed accounts and server-side sessions.
+Password recovery, persisted wedding setup, authenticated route guards, and the
+product dashboard remain unimplemented. The health endpoint returns application
+health only and does not verify MongoDB or provider connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
-work, but the account, wedding, planning, guest, and gallery milestones cannot
-be verified against the source files in this checkout. Treat those entries as
-historical records until their source is restored or separately audited. The
-backend FastAPI scaffold also remains outside the current Next.js modular
-monolith startup path described by the system design.
+work. Current account authentication was reverified locally on 2026-10-20;
+older wedding, planning, guest, and gallery claims remain historical and cannot
+be verified against the source files in this checkout. The backend FastAPI
+scaffold also remains outside the current Next.js modular monolith startup path
+described by the system design.
 | Milestone | Status | Recorded on |
 | --- | --- | --- |
 | Application scaffold | Complete — foundation only | 2026-09-10 |
@@ -59,7 +60,7 @@ monolith startup path described by the system design.
 | Organiser photo gallery | Implemented — source publication authorised | 2026-09-18 |
 | Public marketing homepage rebuild in this checkout | Revised against Stitch — illustrative UI | 2026-10-17 |
 | Account and wedding setup screens | In progress — interactive UI prototype only | 2026-10-18 |
-| Email/password sign-in | In progress — API/session implementation; database connection not verified | 2026-10-18 |
+| Email/password authentication | Implemented — signup, sign-in and logout verified against MongoDB; other Foundation work remains | 2026-10-18 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -975,10 +976,10 @@ see milestone 15. The setup details below preserve the original setup record.
 - PRD journey order and the current Stitch step order differ. This prototype
   follows the PRD order: invite members before setting up events.
 
-## 18. Email/password sign-in foundation
+## 18. Email/password authentication foundation
 
-**Status:** In progress — implementation present; live database authentication
-not verified
+**Status:** Implemented — signup, sign-in, logout, and session lifecycle verified;
+Foundation phase remains in progress
 
 **Recorded on:** 2026-10-18
 
@@ -987,6 +988,16 @@ not verified
 - Connected the login form to `POST /api/auth/login`, with Zod request
   validation, normalized email lookup, bcrypt password verification, and a
   generic invalid-credentials response.
+- Connected signup UI to `POST /api/auth/signup`. New accounts use normalized
+  unique email addresses, bcrypt password hashes, and an authenticated session;
+  duplicate email addresses receive a clear conflict response.
+- Added `POST /api/auth/logout` to revoke the stored session and clear its cookie.
+  Sign-in and signup forms continue to the current onboarding preview after the
+  server confirms the session. The onboarding UI has a working sign-out action.
+- Added HMAC-keyed MongoDB fixed-window limits for signups and sign-ins, with
+  10 attempts per email per 15 minutes and shared limits of 30 signups / 60
+  sign-ins per minute. The shared limits are a small-pilot tradeoff and can
+  temporarily block all users if exhausted.
 - Added MongoDB User, Session, WeddingMembership, and minimal Wedding read
   models needed by the login response and current-user endpoint.
 - Created random session cookies with HttpOnly, SameSite=Lax, production Secure
@@ -1003,37 +1014,66 @@ not verified
 
 ### Validation
 
-- `npx eslint src` passed and `npx tsc --noEmit --incremental false` passed.
-- The live `/api/auth/me` endpoint returned 401 without a session, as designed.
-- A database-backed invalid-login request returned a generic 500 because the
-  configured MongoDB connection string is rejected as invalid by the MongoDB
-  driver. Successful credentials, session persistence, and cookie round-trip
-  remain unverified until the connection string is corrected.
-- The installed Node runtime is v21.5.0, below this project’s declared minimum
-  of v22.13.0; run the application with the supported Node version before
-  treating runtime verification as complete.
+- `npm test` (3 auth-schema tests), `npm run lint`, and
+  `npx tsc --noEmit --incremental false` passed using Node 24.19.0.
+- Live local API verification against the configured MongoDB database passed:
+  signup returned 201, `/api/auth/me` returned 200 with the new session,
+  logout returned 200, sign-in returned 200, and the revoked session returned
+  401. The disposable test account and its sessions were removed afterward.
+- Invalid credentials returned 401, signup validation returned 400, and logout
+  without a session returned 200. No secret values were included in outputs.
+- The auth limiter returned 401 for the first ten failed sign-ins and 429 for
+  the eleventh attempt for one normalized email.
+- The currently running development server's Node version was not independently
+  checked during this verification. The project's minimum is Node 22.13.0.
+- Current reconfirmation on 2026-10-20: `/login` and `/signup` returned HTTP
+  200, and unauthenticated `/api/auth/me` returned 401. A new signup could not
+  be completed because the MongoDB driver failed TLS negotiation with
+  `ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR` for all resolved Atlas nodes; direct
+  Mongoose diagnostics reported `MongooseServerSelectionError`. SRV DNS resolved
+  to three nodes, and the configured database name remains
+  `make_my_marriage`. No QA user was created in this blocked run. The prior
+  successful auth verification above is retained as historical evidence, but
+  current signup persistence and sign-in needed to be rerun after connectivity
+  was restored. The later recovery check below supersedes that temporary block.
+- Later on 2026-10-20, after the user restored Atlas connectivity, signup
+  returned 201, session lookup returned 200, logout returned 200 and revoked
+  the session (subsequent lookup returned 401), sign-in returned 200 with a
+  valid session, and final logout returned 200. A direct database read found
+  one user document in `make_my_marriage.users`, with normalized email and a
+  bcrypt password hash. A disposable QA account was removed; the remaining
+  document belongs to the user's signup. Duplicate-signup and rate-limit checks
+  were not repeated in this recovery run. See [AUTH_QA.md](AUTH_QA.md).
 
 ### Remaining work and limitations
 
-- Correct the local `MONGODB_URI`, then verify successful and invalid sign-in,
-  session cookie round-trip, expiry, and the current-user response against the
-  configured database.
-- Implement signup so a new user can create a password and then use sign-in;
-  signup, logout, rate limiting, and password reset remain pending.
+- Password reset and email delivery remain pending; the forgot-password page is
+  still a UI placeholder. V1 does not require email verification.
+- Signup and sign-in use fixed-window rate limits, but the shared application
+  ceilings can be exhausted by one caller. Before opening public signup, replace
+  them with trusted per-client limits while retaining per-email limits.
 - Add server-side authentication guards before exposing private wedding APIs or
   screens. Do not treat the current onboarding prototype as persisted data.
+- Sign-in and signup redirect to the onboarding preview because wedding
+  creation and the dashboard are not yet server-backed. Session expiry and TTL
+  cleanup are implemented, but expiry behavior has not received a separate live
+  wait-and-expire test.
+- The MongoDB TLS failure seen earlier on 2026-10-20 was resolved, and local
+  signup/sign-in connectivity was verified afterward. Rerun the QA checklist
+  after changing Atlas access, the root `.env.local`, or authentication code.
 
 ## Upcoming development
 
 The homepage milestone is complete for its stated scope: responsive marketing UI
-with illustrative preview data. **The next product phase is Phase 1: Foundation**
-from the PRD. The checkout currently has no verified product workflows, so no
-later phase is marked complete here.
+with illustrative preview data. **The current product phase is Phase 1:
+Foundation** from the PRD. Authentication is working; wedding setup persistence,
+the dashboard, and authorization are still pending. No later product phase is
+marked complete in this checkout.
 
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
-| 1. Foundation | In progress — sign-in foundation; database configuration blocks runtime verification | Login API/session and current-user lookup; signup, logout, persisted onboarding, dashboard and authorization remain pending. |
+| 1. Foundation | In progress — account authentication verified; wedding persistence and authorization remain | Signup, sign-in, logout, current-user lookup, and auth rate limits work against MongoDB. Password recovery, persisted onboarding, dashboard and route guards remain pending. |
 | 2. Planning | Pending | Events and tasks |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
@@ -1041,11 +1081,9 @@ later phase is marked complete here.
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
 
-**Recommended next increment:** correct and verify the local MongoDB connection,
-then implement signup and logout using the sign-in session infrastructure. Add
-the necessary rate limiting and focused auth/tenant-isolation coverage before
-exposing private workflows. Then persist wedding creation and memberships before
-building the dashboard shell. Keep the documented one-user/one-wedding rule and
+**Recommended next increment:** make wedding creation and its Admin membership
+persist from the existing onboarding screen, then add authenticated route guards
+and the dashboard shell. Keep the documented one-user/one-wedding rule and
 Admin/Manager permissions intact.
 
 For each feature increment, update this file in the same change: record its

@@ -8,4 +8,6 @@ This Next.js frontend follows the feature-oriented layout of the Make My Marriag
 - `modules/` contains feature use cases and domain logic.
 - `server/` contains infrastructure adapters for auth, database, email, HTTP, and storage.
 
-The independent FastAPI service remains in `backend/src/app/` and owns the current health endpoint and future backend API modules. Keep secrets and database access server-side.
+The approved system design uses Next.js Route Handlers for HTTP boundaries and
+server-side modules for business logic and persistence. Do not add a separate
+FastAPI service; keep secrets and database access server-side.

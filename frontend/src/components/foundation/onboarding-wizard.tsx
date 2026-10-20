@@ -13,6 +13,19 @@ export function OnboardingWizard() {
   const [events, setEvents] = useState<string[]>(["Wedding"]);
   const [customEvent, setCustomEvent] = useState("");
   const [message, setMessage] = useState("");
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function signOut() {
+    setIsSigningOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Sign-out failed");
+      window.location.assign("/login");
+    } catch {
+      setMessage("Unable to sign out right now. Please try again.");
+      setIsSigningOut(false);
+    }
+  }
 
   function addMember(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +48,7 @@ export function OnboardingWizard() {
 
   return (
     <main className="foundation-page onboarding-page">
-      <header className="foundation-header"><a className="brand" href="/" aria-label="Make My Marriage home"><span className="brand-icon" aria-hidden="true">♡</span><span>Make My <b>Marriage</b></span></a><span className="onboarding-help">A few thoughtful steps to get started</span></header>
+      <header className="foundation-header"><a className="brand" href="/" aria-label="Make My Marriage home"><span className="brand-icon" aria-hidden="true">♡</span><span>Make My <b>Marriage</b></span></a><div className="onboarding-help">A few thoughtful steps to get started <button className="text-button" type="button" onClick={() => void signOut()} disabled={isSigningOut}>{isSigningOut ? "Signing out…" : "Sign out"}</button></div></header>
       <div className="onboarding-wrap">
         <div className="onboarding-heading"><p className="foundation-eyebrow">YOUR WEDDING, YOUR WAY</p><h1>Let’s make a plan together</h1><p>Start with the couple, invite your co-planners, then shape the celebrations.</p></div>
         <ol className="onboarding-progress" aria-label="Wedding setup steps">
