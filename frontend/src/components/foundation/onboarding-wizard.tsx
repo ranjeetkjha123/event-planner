@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const eventOptions = ["Engagement", "Mehendi", "Haldi", "Sangeet", "Cocktail", "Wedding", "Reception"];
@@ -7,12 +8,14 @@ type Member = { email: string; role: "MANAGER" };
 
 export function OnboardingWizard() {
   const [step, setStep] = useState(1);
-  const [couple, setCouple] = useState({ bride: "", groom: "", date: "", city: "" });
+  const router = useRouter();
+  const [couple, setCouple] = useState({ bride: "", groom: "", title: "", description: "", date: "", city: "", timeZone: "Asia/Kolkata" });
   const [email, setEmail] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [events, setEvents] = useState<string[]>(["Wedding"]);
   const [customEvent, setCustomEvent] = useState("");
   const [message, setMessage] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function signOut() {
@@ -46,6 +49,37 @@ export function OnboardingWizard() {
     setCustomEvent("");
   }
 
+  async function createWorkspace() {
+    setIsCreating(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/wedding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brideName: couple.bride,
+          groomName: couple.groom,
+          title: couple.title || undefined,
+          description: couple.description || undefined,
+          weddingDate: couple.date,
+          timeZone: couple.timeZone,
+          location: { city: couple.city, formattedAddress: couple.city },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setMessage(result.error?.message ?? "Unable to create your wedding workspace. Please try again.");
+        return;
+      }
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setMessage("Unable to reach the server. Your details are still here; please try again.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   return (
     <main className="foundation-page onboarding-page">
       <header className="foundation-header"><a className="brand" href="/" aria-label="Make My Marriage home"><span className="brand-icon" aria-hidden="true">♡</span><span>Make My <b>Marriage</b></span></a><div className="onboarding-help">A few thoughtful steps to get started <button className="text-button" type="button" onClick={() => void signOut()} disabled={isSigningOut}>{isSigningOut ? "Signing out…" : "Sign out"}</button></div></header>
@@ -65,7 +99,10 @@ export function OnboardingWizard() {
               <label>Groom’s name<input autoComplete="family-name" value={couple.groom} onChange={(event) => setCouple({ ...couple, groom: event.target.value })} placeholder="Groom’s full name" required /></label>
               <label>Wedding date<input type="date" value={couple.date} onChange={(event) => setCouple({ ...couple, date: event.target.value })} required /></label>
               <label>Wedding city or location<input value={couple.city} onChange={(event) => setCouple({ ...couple, city: event.target.value })} placeholder="e.g. Jaipur, Rajasthan" required /></label>
+              <label>Wedding title (optional)<input value={couple.title} onChange={(event) => setCouple({ ...couple, title: event.target.value })} placeholder="e.g. Aanya & Rohan" /></label>
+              <label>Time zone<input list="wedding-time-zones" value={couple.timeZone} onChange={(event) => setCouple({ ...couple, timeZone: event.target.value })} placeholder="Asia/Kolkata" required /><datalist id="wedding-time-zones"><option value="Asia/Kolkata" /><option value="Asia/Dubai" /><option value="Asia/Singapore" /><option value="Europe/London" /><option value="Europe/Paris" /><option value="America/New_York" /><option value="America/Los_Angeles" /><option value="Australia/Sydney" /></datalist></label>
             </div>
+            <label className="wedding-description-field">Welcome message (optional)<textarea value={couple.description} onChange={(event) => setCouple({ ...couple, description: event.target.value })} maxLength={1000} rows={3} placeholder="A little about your celebration" /></label>
             <div className="onboarding-actions"><span>Next, invite the people planning alongside you.</span><button className="button button-primary" type="button" disabled={!couple.bride.trim() || !couple.groom.trim() || !couple.date || !couple.city.trim()} onClick={() => { setStep(2); setMessage(""); }}>Invite family <span aria-hidden="true">→</span></button></div>
           </div>}
           {step === 2 && <div>
@@ -75,7 +112,7 @@ export function OnboardingWizard() {
               {members.map((member, index) => <div className="member-row" key={`${member.email}-${index}`}><span className="member-avatar member-avatar-gold">{member.email.slice(0, 1).toUpperCase()}</span><div><strong>{member.email}</strong><small>Can help plan and manage the wedding</small></div><span className="role-pill">MANAGER</span><button className="remove-member" type="button" aria-label={`Remove ${member.email}`} onClick={() => setMembers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}
               {members.length === 0 && <p className="empty-invites">Add a co-planner above, or continue and invite them later.</p>}
             </div>
-            <p className="permission-note"><span aria-hidden="true">ⓘ</span> The person who creates the workspace becomes its first Admin. Invited family members join as Managers.</p>
+            <p className="permission-note"><span aria-hidden="true">ⓘ</span> Your workspace creator account becomes its first Admin. Adding names here is currently a preview; invitations will be built in the next member-management increment.</p>
             <div className="onboarding-actions"><button className="text-button" type="button" onClick={() => { setStep(1); setMessage(""); }}>← Back to couple details</button><button className="button button-primary" type="button" onClick={() => { setStep(3); setMessage(""); }}>Continue to events <span aria-hidden="true">→</span></button></div>
           </div>}
           {step === 3 && <div>
@@ -83,11 +120,11 @@ export function OnboardingWizard() {
             <div className="event-options">{eventOptions.map((eventName) => <label className={events.includes(eventName) ? "event-option is-selected" : "event-option"} key={eventName}><input type="checkbox" checked={events.includes(eventName)} onChange={() => toggleEvent(eventName)} /><span className="event-check" aria-hidden="true">{events.includes(eventName) ? "✓" : "+"}</span><span><strong>{eventName}</strong><small>{eventName === "Wedding" ? "The main ceremony" : `Add ${eventName.toLowerCase()} to your celebrations`}</small></span></label>)}</div>
             <form className="custom-event-form" onSubmit={addCustomEvent}><label htmlFor="custom-event">Have another tradition?</label><div><input id="custom-event" value={customEvent} onChange={(event) => setCustomEvent(event.target.value)} placeholder="Add a custom event" /><button className="button button-outline" type="submit">Add event</button></div></form>
             {events.some((eventName) => !eventOptions.includes(eventName)) && <p className="custom-event-list">Custom events: {events.filter((eventName) => !eventOptions.includes(eventName)).join(", ")}</p>}
-            <div className="onboarding-actions"><button className="text-button" type="button" onClick={() => { setStep(2); setMessage(""); }}>← Back to family &amp; planners</button><button className="button button-primary" type="button" onClick={() => setMessage("Your setup preview is ready. Wedding creation, invitations, and event saving will be connected when the server-backed Foundation phase is implemented.")}>Review wedding setup <span aria-hidden="true">→</span></button></div>
+            <div className="onboarding-actions"><button className="text-button" type="button" onClick={() => { setStep(2); setMessage(""); }}>← Back to family &amp; planners</button><button className="button button-primary" type="button" disabled={isCreating} onClick={() => void createWorkspace()}>{isCreating ? "Creating workspace…" : "Create wedding workspace"} <span aria-hidden="true">→</span></button></div>
             {message && <p className="prototype-message" role="status">{message}</p>}
           </div>}
         </section>
-        <p className="prototype-banner"><span aria-hidden="true">✿</span> Setup preview · Your details stay in this page session and are not sent to a server yet.</p>
+        <p className="prototype-banner"><span aria-hidden="true">✿</span> Wedding details are saved when you create the workspace. Planner invitations and event selections are currently previews and are not saved yet.</p>
       </div>
       <footer className="foundation-footer"><span>Make My Marriage</span><span>One shared place for your wedding plans.</span></footer>
     </main>

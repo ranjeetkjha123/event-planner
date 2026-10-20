@@ -17,8 +17,10 @@ The current docs define a Next.js modular monolith. The FastAPI package still
 present under `backend/` is a leftover scaffold that conflicts with that
 architecture and is not part of the documented app startup path. The public
 homepage is the first current product UI increment; email/password accounts and
-MongoDB sessions are now implemented and have passed a live local smoke check.
-Wedding setup persistence and the other product workflows remain pending.
+MongoDB sessions are implemented and have passed a live local smoke check.
+Wedding creation and the initial Admin membership are implemented in this
+follow-up; wedding editing is now implemented, while member invitations and
+event persistence remain pending.
 
 This is the ongoing record of major development milestones. Read it before
 starting development and update it whenever a major feature is implemented or
@@ -31,9 +33,13 @@ The source files present in this checkout include the public homepage, account
 entry screens, a password recovery screen, a three-step wedding setup UI, and
 the Next.js health Route Handler. Email/password signup, sign-in, logout, and
 current-session lookup use MongoDB-backed accounts and server-side sessions.
-Password recovery, persisted wedding setup, authenticated route guards, and the
-product dashboard remain unimplemented. The health endpoint returns application
-health only and does not verify MongoDB or provider connectivity.
+Wedding setup persists the wedding plus its creator's Admin membership, and the
+dashboard reads it behind session guards. Wedding detail editing now has a
+prefilled form and membership-scoped PATCH handler with role checks. The public
+homepage also reads the server session and switches between account/workspace
+actions and signed-out account links. Planner invitations and event schedules
+remain preview-only. The health endpoint returns application health only and
+does not verify MongoDB or provider connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
 work. Current account authentication was reverified locally on 2026-10-20;
@@ -61,6 +67,9 @@ described by the system design.
 | Public marketing homepage rebuild in this checkout | Revised against Stitch — illustrative UI | 2026-10-17 |
 | Account and wedding setup screens | In progress — interactive UI prototype only | 2026-10-18 |
 | Email/password authentication | Implemented — signup, sign-in and logout verified against MongoDB; other Foundation work remains | 2026-10-18 |
+| Wedding creation and initial dashboard | Implemented — persistence and creator Admin membership; invitations and events remain preview-only | 2026-10-20 |
+| Wedding details edit and save | Implemented — edit form and role-authorized, membership-scoped PATCH; persistence round trip verified with disposable QA workspace | 2026-10-20 |
+| Homepage session-aware navigation | Implemented — signed-in users see account and wedding/setup links; signed-out users see sign-in/create-account links; verified with disposable account | 2026-10-20 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -362,6 +371,60 @@ The user approved these screens in Stitch project `5169674594013355245`:
   onboarding retains its existing expiry and account-switch protection.
 - This milestone is delivered through the local development preview. Publishing
   the source to GitHub does not constitute a production deployment.
+
+### Current checkout follow-up — 2026-10-20
+
+**Status:** Implemented — end-to-end local database flows verified
+
+#### Implemented scope
+
+- The current onboarding flow submits validated couple, date, title, description,
+  time-zone, and city details to `POST /api/wedding`.
+- The service atomically creates the Wedding and creator's `ADMIN` membership,
+  generates a unique stable website slug and a hidden high-entropy gallery
+  secret, and rejects repeat creation for the same account. GET `/api/wedding`
+  derives access from the signed-in user's membership and returns no share secret.
+- `/onboarding` and `/dashboard` require a valid session and route users based
+  on whether they have a Wedding. The dashboard shows only persisted values.
+- `/wedding/edit` pre-fills the persisted wedding, and `PATCH /api/wedding`
+  allows Admin/Manager members to save validated updates to their own wedding.
+- The homepage reads the current server session and displays the account and
+  wedding/setup action while signed in, or the sign-in/create-account actions
+  while signed out.
+- The existing planner and event steps remain clearly marked as previews; their
+  entries are not sent or saved. Focused request-schema tests were added.
+
+#### Validation
+
+- Implementation and documentation review completed against the PRD and API,
+  database, and system design documents.
+- Lint, TypeScript, and all 7 focused tests passed with Node 24.19.0. The
+  production build was attempted but blocked by Windows `EPERM` writing build
+  output while the local dev server was running; the dev server remains active.
+- Local API/database QA passed on 2026-10-20 after restarting the dev server to
+  load the updated Mongoose model: 16 flow checks passed for signed-out access,
+  signup/session, invalid-date rejection, wedding creation/readback, secret
+  omission, initial Admin membership, duplicate creation, dashboard and
+  onboarding guards, logout, and sign-in persistence. A final database cleanup
+  check also passed; the disposable user, wedding, membership, and rate-limit
+  record were removed.
+- End-to-end QA verified wedding edit/save/readback, edit-page rendering,
+  unchanged wedding slug, and homepage session persistence across home/dashboard
+  navigation, sign-out, and sign-in. All temporary QA records were removed.
+
+#### Remaining work
+
+- Implement and verify member invitations, acceptance, and revocation using the
+  existing Stitch member-management and invitation screens.
+- Implement persisted wedding events and update dashboard progress from saved
+  data. The event checkboxes are currently display-only.
+- Restart the local dev server after changing a Mongoose model so its cached
+  schema is reloaded. QA found that the pre-change process accepted a create
+  request but stripped fields from the saved document; the fresh-process rerun
+  passed.
+- Stitch MCP configuration is present in `.codex/config.toml`, but its tools
+  were unavailable in this session. Screen references recorded above remain the
+  design source used for this increment; no new screenshot was retrieved.
 
 ## 5. Wedding detail editing
 
@@ -1066,14 +1129,14 @@ Foundation phase remains in progress
 
 The homepage milestone is complete for its stated scope: responsive marketing UI
 with illustrative preview data. **The current product phase is Phase 1:
-Foundation** from the PRD. Authentication is working; wedding setup persistence,
-the dashboard, and authorization are still pending. No later product phase is
-marked complete in this checkout.
+Foundation** from the PRD. Authentication, wedding setup persistence, guarded
+dashboard, and wedding-detail editing are implemented. Member invitations remain
+pending. No later product phase is marked complete in this checkout.
 
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
-| 1. Foundation | In progress — account authentication verified; wedding persistence and authorization remain | Signup, sign-in, logout, current-user lookup, and auth rate limits work against MongoDB. Password recovery, persisted onboarding, dashboard and route guards remain pending. |
+| 1. Foundation | In progress — authentication, wedding setup, dashboard and editing implemented; member invitations remain pending | Signup, sign-in, logout, current-user lookup, persisted wedding setup, creator Admin membership, guarded dashboard and edit/save flow. Password recovery and member invitations remain pending. |
 | 2. Planning | Pending | Events and tasks |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
@@ -1081,10 +1144,13 @@ marked complete in this checkout.
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
 
-**Recommended next increment:** make wedding creation and its Admin membership
-persist from the existing onboarding screen, then add authenticated route guards
-and the dashboard shell. Keep the documented one-user/one-wedding rule and
-Admin/Manager permissions intact.
+**Recommended next increment:** implement member invitation and acceptance
+using the documented Wedding Members and Accept Invitation designs, then persist
+selected wedding events. Keep invitations and event selection visibly marked as
+preview-only until those server-backed flows are complete. The active localhost
+browser session currently lands on onboarding and has no wedding workspace;
+testing used a disposable QA workspace and did not modify the user's wedding
+data.
 
 For each feature increment, update this file in the same change: record its
 status and date, implemented scope, validation performed, and remaining work or

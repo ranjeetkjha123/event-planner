@@ -47,9 +47,16 @@ session tokens into chat, screenshots, or logs.
 
 - Signup, sign-in, current-user lookup, logout, and authentication rate limits
   are server-backed.
+- Wedding creation and the initial Admin membership are server-backed; the
+  `/dashboard` route reads persisted wedding data after sign-in.
+- Wedding details have a prefilled `/wedding/edit` form and authenticated
+  `PATCH /api/wedding` handler. The save/readback flow passed end-to-end with a
+  disposable QA workspace; see the editing execution record below.
 - Password recovery remains a placeholder; it is not a passing account flow.
-- `/onboarding` is currently a preview. Wedding details, planner invitations,
-  and events entered there are not persisted yet.
+- Planner invitations and event selections entered during onboarding remain
+  previews and are not persisted yet. See the wedding setup QA record below.
+- The public homepage reflects the current server session: signed-in users get
+  their account and wedding/setup links; signed-out users get account links.
 
 ## Execution record — 2026-10-20
 
@@ -83,3 +90,55 @@ session tokens into chat, screenshots, or logs.
   signup flow. Duplicate signup and rate-limit checks were not repeated during
   this recovery check; see the earlier successful verification in
   `PROJECT_STATUS.md` for those results.
+
+### Wedding setup QA — 2026-10-20
+
+- The local Next.js server was restarted with Node 24.19.0 before testing so the
+  current Mongoose Wedding schema was loaded.
+- All 16 application checks passed using a disposable `example.invalid` account:
+  signed-out access, signup and session lookup, invalid date rejection, wedding
+  creation and database-backed readback, gallery-token omission, initial Admin
+  role, duplicate creation rejection, dashboard rendering, onboarding redirect,
+  logout/session revocation, sign-in after creation, and continued membership
+  access.
+- Cleanup was confirmed: the temporary user, its wedding, membership, session,
+  and per-email rate-limit record were removed. The user's real account and data
+  were not used.
+- A first run against the already-running server failed readback because its
+  cached Mongoose model predated the schema update. The resulting QA-only data
+  was identified by its generated fake email and test names, then removed. The
+  restarted server passed the complete rerun.
+
+### Wedding detail editing — 2026-10-20
+
+- The edit schema accepted partial documented updates and rejected empty
+  updates, impossible dates, and client-supplied `weddingId` values.
+- Unauthenticated `GET /wedding/edit` redirected to `/login`; unauthenticated
+  `PATCH /api/wedding` returned 401. The route checks the signed-in member's
+  role and derives wedding scope from that membership.
+- Lint, TypeScript, and all 7 test cases passed with Node 24.19.0.
+- The active local browser session currently routes to onboarding and has no
+  wedding workspace. The end-to-end test used a disposable QA account and
+  workspace; cleanup deleted its user, wedding, membership and email rate-limit
+  record. The user's account and wedding data were not used or changed.
+- The application-side flow passed: signup, wedding creation, PATCH updates to
+  couple names/date/location, default-title refresh, unchanged public slug, GET
+  readback, and updated dashboard HTML. The test account was logged out before
+  cleanup.
+- The signed-in edit page also rendered with the saved wedding values and save
+  button. A second disposable QA run was cleaned up: one user, one wedding, one
+  membership, and its email rate-limit record were removed.
+
+### Homepage session persistence — 2026-10-20
+
+- Initial QA found a defect: signup/sign-in and `/dashboard` worked, but the
+  homepage still showed Sign In and Get Started while authenticated.
+- After the homepage change, a signed-in account with a wedding displayed its
+  account label and Go to your wedding action; rendered homepage HTML had no
+  Sign In or signup links. Opening the dashboard afterward still returned 200.
+- Sign-out returned success and revoked the session (`/api/auth/me` returned
+  401); the homepage then showed the signed-out account links. Signing in again
+  restored the signed-in homepage actions without changing the workspace.
+- QA used a disposable account/workspace. Cleanup removed its user, wedding,
+  membership, session if present, and per-email rate-limit record. User data was
+  not changed. Lint and TypeScript checks passed after the homepage change.
