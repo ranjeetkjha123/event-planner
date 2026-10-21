@@ -1,5 +1,20 @@
 # Authentication QA
 
+## Fresh account QA after approved reset — 2026-10-21
+
+- At the user's request, all documents were cleared from the seven non-system
+  app collections in `make_my_marriage`; each collection was verified empty.
+- Signup created a fresh account and session (201); `/api/auth/me` returned 200.
+  A fresh wedding was created (201), read back while signed in (200), and the
+  user had Admin membership. The signed-in members page returned 200.
+- Sign-in with the credentials supplied for this QA returned 200; workspace
+  readback succeeded. Logout returned 200 and subsequent session lookup returned
+  401.
+- The requested Manager invitation email was accepted by Resend (the app
+  returned 201) and appeared in the pending invitation list from MongoDB. The
+  user's Outlook inbox and token acceptance were not inspected in this run.
+- No credentials, cookies, session tokens, or raw invitation links are recorded.
+
 This checklist covers the email/password account flows implemented in the
 Next.js app. Run it against the local development app and the intended
 development MongoDB database. Never paste `MONGODB_URI`, passwords, cookies, or
@@ -142,3 +157,22 @@ session tokens into chat, screenshots, or logs.
 - QA used a disposable account/workspace. Cleanup removed its user, wedding,
   membership, session if present, and per-email rate-limit record. User data was
   not changed. Lint and TypeScript checks passed after the homepage change.
+
+### Member invitation and event increment — 2026-10-20
+
+- Focused tests cover valid/invalid event inputs, rejecting client-selected
+  wedding IDs, timezone-aware local event conversion, invitation email/role
+  validation, and high-entropy token shape.
+- Lint, TypeScript, and all 11 tests passed. Local unauthenticated checks
+  returned 401 for `/api/events`, `/api/members`, and
+  `/api/members/invitations`; `/members` redirected to login. Invalid public
+  invitation tokens returned 404.
+- A read-only Resend domains check accepted the configured API key but returned
+  no domains. No email was sent, so actual provider delivery remains unverified
+  until a sender domain is available.
+- A separate local MongoDB QA flow passed 13 checks using two disposable fake
+  accounts: event create/readback and dashboard display, public invitation
+  summary, mismatch rejection, matching-email acceptance, member access,
+  one-time use, member listing, and revocation. The account, wedding, events,
+  invitations, memberships, sessions, and per-email signup limits were removed.
+  No email was sent; actual delivery remains unverified.

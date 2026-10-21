@@ -2,9 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { localDateTimeToIso } from "@/modules/events/event-time";
 
 const eventOptions = ["Engagement", "Mehendi", "Haldi", "Sangeet", "Cocktail", "Wedding", "Reception"];
+const eventTypes: Record<string, string> = { Engagement: "ENGAGEMENT", Mehendi: "MEHENDI", Haldi: "HALDI", Sangeet: "SANGEET", Cocktail: "COCKTAIL", Wedding: "WEDDING", Reception: "RECEPTION" };
 type Member = { email: string; role: "MANAGER" };
+type SetupEvent = { name: string; type: string; date: string; time: string };
 
 export function OnboardingWizard() {
   const [step, setStep] = useState(1);
@@ -12,10 +15,11 @@ export function OnboardingWizard() {
   const [couple, setCouple] = useState({ bride: "", groom: "", title: "", description: "", date: "", city: "", timeZone: "Asia/Kolkata" });
   const [email, setEmail] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
-  const [events, setEvents] = useState<string[]>(["Wedding"]);
+  const [events, setEvents] = useState<SetupEvent[]>([{ name: "Wedding", type: "WEDDING", date: "", time: "10:00" }]);
   const [customEvent, setCustomEvent] = useState("");
   const [message, setMessage] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [workspaceCreated, setWorkspaceCreated] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function signOut() {
@@ -33,19 +37,23 @@ export function OnboardingWizard() {
   function addMember(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;
-    setMembers((current) => [...current, { email: email.trim(), role: "MANAGER" }]);
+    setMembers((current) => current.some((member) => member.email.toLowerCase() === email.trim().toLowerCase()) ? current : [...current, { email: email.trim(), role: "MANAGER" }]);
     setEmail("");
   }
 
   function toggleEvent(value: string) {
-    setEvents((current) => current.includes(value) ? current.filter((event) => event !== value) : [...current, value]);
+    setEvents((current) => current.some((event) => event.name === value) ? current.filter((event) => event.name !== value) : [...current, { name: value, type: eventTypes[value] ?? "CUSTOM", date: couple.date, time: "10:00" }]);
+  }
+
+  function updateEvent(name: string, key: "date" | "time", value: string) {
+    setEvents((current) => current.map((event) => event.name === name ? { ...event, [key]: value } : event));
   }
 
   function addCustomEvent(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = customEvent.trim();
     if (!value) return;
-    if (!events.includes(value)) setEvents((current) => [...current, value]);
+    if (!events.some((event) => event.name.toLowerCase() === value.toLowerCase())) setEvents((current) => [...current, { name: value, type: "CUSTOM", date: couple.date, time: "10:00" }]);
     setCustomEvent("");
   }
 
@@ -69,6 +77,21 @@ export function OnboardingWizard() {
       const result = await response.json();
       if (!response.ok) {
         setMessage(result.error?.message ?? "Unable to create your wedding workspace. Please try again.");
+        return;
+      }
+      setWorkspaceCreated(true);
+      const eventResults = await Promise.all(events.map(async (event) => {
+        const eventResponse = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: event.name, type: event.type, startsAt: localDateTimeToIso(event.date, event.time, couple.timeZone) }) });
+        return eventResponse.ok;
+      }));
+      const invitationResults = await Promise.all(members.map(async (member) => {
+        const inviteResponse = await fetch("/api/members/invitations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: member.email, role: member.role }) });
+        return inviteResponse.ok;
+      }));
+      const failedEvents = eventResults.filter((ok) => !ok).length;
+      const failedInvitations = invitationResults.filter((ok) => !ok).length;
+      if (failedEvents || failedInvitations) {
+        setMessage(`Your wedding workspace was created. ${failedEvents ? `${failedEvents} event${failedEvents === 1 ? "" : "s"} could not be saved. ` : ""}${failedInvitations ? `${failedInvitations} invitation${failedInvitations === 1 ? "" : "s"} could not be emailed. ` : ""}Continue to your dashboard to review the saved items and try again.`);
         return;
       }
       router.replace("/dashboard");
@@ -112,19 +135,20 @@ export function OnboardingWizard() {
               {members.map((member, index) => <div className="member-row" key={`${member.email}-${index}`}><span className="member-avatar member-avatar-gold">{member.email.slice(0, 1).toUpperCase()}</span><div><strong>{member.email}</strong><small>Can help plan and manage the wedding</small></div><span className="role-pill">MANAGER</span><button className="remove-member" type="button" aria-label={`Remove ${member.email}`} onClick={() => setMembers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}
               {members.length === 0 && <p className="empty-invites">Add a co-planner above, or continue and invite them later.</p>}
             </div>
-            <p className="permission-note"><span aria-hidden="true">ⓘ</span> Your workspace creator account becomes its first Admin. Adding names here is currently a preview; invitations will be built in the next member-management increment.</p>
+            <p className="permission-note"><span aria-hidden="true">ⓘ</span> Your account becomes the first Admin. Invitations are emailed after the wedding workspace is created; each invitee accepts with the matching account email.</p>
             <div className="onboarding-actions"><button className="text-button" type="button" onClick={() => { setStep(1); setMessage(""); }}>← Back to couple details</button><button className="button button-primary" type="button" onClick={() => { setStep(3); setMessage(""); }}>Continue to events <span aria-hidden="true">→</span></button></div>
           </div>}
           {step === 3 && <div>
             <p className="foundation-eyebrow">STEP 3 · EVENTS &amp; TRADITIONS</p><h2>Choose your wedding celebrations</h2><p className="onboarding-description">Pick the events you’re planning. You can add, remove, or edit them later.</p>
-            <div className="event-options">{eventOptions.map((eventName) => <label className={events.includes(eventName) ? "event-option is-selected" : "event-option"} key={eventName}><input type="checkbox" checked={events.includes(eventName)} onChange={() => toggleEvent(eventName)} /><span className="event-check" aria-hidden="true">{events.includes(eventName) ? "✓" : "+"}</span><span><strong>{eventName}</strong><small>{eventName === "Wedding" ? "The main ceremony" : `Add ${eventName.toLowerCase()} to your celebrations`}</small></span></label>)}</div>
+            <div className="event-options">{eventOptions.map((eventName) => <label className={events.some((event) => event.name === eventName) ? "event-option is-selected" : "event-option"} key={eventName}><input type="checkbox" checked={events.some((event) => event.name === eventName)} onChange={() => toggleEvent(eventName)} /><span className="event-check" aria-hidden="true">{events.some((event) => event.name === eventName) ? "✓" : "+"}</span><span><strong>{eventName}</strong><small>{eventName === "Wedding" ? "The main ceremony" : `Add ${eventName.toLowerCase()} to your celebrations`}</small></span></label>)}</div>
             <form className="custom-event-form" onSubmit={addCustomEvent}><label htmlFor="custom-event">Have another tradition?</label><div><input id="custom-event" value={customEvent} onChange={(event) => setCustomEvent(event.target.value)} placeholder="Add a custom event" /><button className="button button-outline" type="submit">Add event</button></div></form>
-            {events.some((eventName) => !eventOptions.includes(eventName)) && <p className="custom-event-list">Custom events: {events.filter((eventName) => !eventOptions.includes(eventName)).join(", ")}</p>}
-            <div className="onboarding-actions"><button className="text-button" type="button" onClick={() => { setStep(2); setMessage(""); }}>← Back to family &amp; planners</button><button className="button button-primary" type="button" disabled={isCreating} onClick={() => void createWorkspace()}>{isCreating ? "Creating workspace…" : "Create wedding workspace"} <span aria-hidden="true">→</span></button></div>
+            {events.some((event) => !eventOptions.includes(event.name)) && <p className="custom-event-list">Custom events: {events.filter((event) => !eventOptions.includes(event.name)).map((event) => event.name).join(", ")}</p>}
+            <div className="setup-event-dates">{events.map((event) => <div className="setup-event-date" key={event.name}><strong>{event.name}</strong><label>Date<input type="date" value={event.date} required onChange={(change) => updateEvent(event.name, "date", change.target.value)} /></label><label>Start time<input type="time" value={event.time} required onChange={(change) => updateEvent(event.name, "time", change.target.value)} /></label></div>)}</div>
+            <div className="onboarding-actions"><button className="text-button" type="button" disabled={workspaceCreated} onClick={() => { setStep(2); setMessage(""); }}>← Back to family &amp; planners</button>{workspaceCreated ? <button className="button button-primary" type="button" onClick={() => router.replace("/dashboard")}>Go to dashboard <span aria-hidden="true">→</span></button> : <button className="button button-primary" type="button" disabled={isCreating || events.some((event) => !event.date || !event.time)} onClick={() => void createWorkspace()}>{isCreating ? "Creating workspace…" : "Create wedding workspace"} <span aria-hidden="true">→</span></button>}</div>
             {message && <p className="prototype-message" role="status">{message}</p>}
           </div>}
         </section>
-        <p className="prototype-banner"><span aria-hidden="true">✿</span> Wedding details are saved when you create the workspace. Planner invitations and event selections are currently previews and are not saved yet.</p>
+        <p className="prototype-banner"><span aria-hidden="true">✿</span> Wedding details, selected event dates, and co-planner invitations are saved when you create the workspace.</p>
       </div>
       <footer className="foundation-footer"><span>Make My Marriage</span><span>One shared place for your wedding plans.</span></footer>
     </main>

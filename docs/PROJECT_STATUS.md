@@ -1,6 +1,52 @@
 # Make My Marriage — Project Status
 
-**Last updated:** 2026-10-20
+**Last updated:** 2026-10-21
+
+### Follow-up — approved database reset and fresh account QA — 2026-10-21
+
+- After the user explicitly approved clearing all project data, deleted every
+  document from the seven non-system collections in `make_my_marriage`; kept
+  collection/index definitions. Verified each collection was empty immediately
+  after deletion.
+- Recreated the user's account through signup, verified the new session and
+  sign-in, created a fresh wedding workspace using the couple/date/location
+  details previously shown, and confirmed wedding readback as Admin.
+- Sent one Manager invitation to the user-authorized recipient through Resend.
+  The app returned success and the pending invitation was read back from MongoDB.
+  The Outlook inbox and the invitation acceptance click were not directly
+  observed; those still need recipient-side confirmation.
+- Logged out and confirmed the session endpoint returned 401. No passwords,
+  cookies, tokens, or invitation URLs were recorded in project docs.
+
+### Follow-up — member role editing — 2026-10-21
+
+- The Admin members screen now offers an Admin/Manager selector and explicit
+  Save action for each member. Saving calls the documented
+  `PATCH /api/members/:membershipId` endpoint.
+- The server validates the role, authenticates and rechecks Admin authority,
+  scopes the target to the current wedding, and protects the final Admin using
+  a transaction that serializes role changes for the wedding.
+- Validation: all 12 tests, lint, TypeScript, and diff checks passed. Live QA
+  against MongoDB passed 12 checks: Admin members page output, current-role
+  readback, Manager authorization denial, promote/demote and persistence,
+  final-Admin protection, changed-role authorization, invalid-role rejection,
+  and cross-wedding isolation. Three disposable users, two weddings, their
+  memberships, and sessions were removed. No invitation emails were sent.
+- Remaining QA: manually click the role selector in a browser and verify the
+  refreshed screen under a signed-in Admin session; concurrent Admin role
+  changes were not stress-tested.
+
+### Follow-up — invitation link origin — 2026-10-20
+
+- Invitation URLs now use `NEXT_PUBLIC_APP_URL` when configured, rather than
+  the incoming request host. This prevents production invitation emails from
+  containing a local or proxy-generated host. Local development falls back to
+  the local request origin.
+- Production requires `NEXT_PUBLIC_APP_URL`; set it to the deployed web app URL
+  (for example, the public Vercel URL). The sender address configured in Resend
+  is independent of this app URL.
+- Validation: ESLint, TypeScript, and `git diff --check` passed. No new email was
+  sent as part of this code change.
 
 ## Workspace audit — 2026-10-17
 
@@ -18,9 +64,9 @@ present under `backend/` is a leftover scaffold that conflicts with that
 architecture and is not part of the documented app startup path. The public
 homepage is the first current product UI increment; email/password accounts and
 MongoDB sessions are implemented and have passed a live local smoke check.
-Wedding creation and the initial Admin membership are implemented in this
-follow-up; wedding editing is now implemented, while member invitations and
-event persistence remain pending.
+Wedding creation, editing, session-aware navigation, event persistence, and the
+member invitation flow are implemented in this checkout. Invitation delivery
+and acceptance still need live end-to-end QA with separate accounts.
 
 This is the ongoing record of major development milestones. Read it before
 starting development and update it whenever a major feature is implemented or
@@ -34,12 +80,13 @@ entry screens, a password recovery screen, a three-step wedding setup UI, and
 the Next.js health Route Handler. Email/password signup, sign-in, logout, and
 current-session lookup use MongoDB-backed accounts and server-side sessions.
 Wedding setup persists the wedding plus its creator's Admin membership, and the
-dashboard reads it behind session guards. Wedding detail editing now has a
+dashboard reads it behind session guards. Wedding detail editing has a
 prefilled form and membership-scoped PATCH handler with role checks. The public
-homepage also reads the server session and switches between account/workspace
-actions and signed-out account links. Planner invitations and event schedules
-remain preview-only. The health endpoint returns application health only and
-does not verify MongoDB or provider connectivity.
+homepage reads the server session and switches between account/workspace actions
+and signed-out account links. The current follow-up adds persisted event
+selections and member invitations, with invitation acceptance joining the
+authenticated user atomically to the wedding. The health endpoint returns
+application health only and does not verify MongoDB or provider connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
 work. Current account authentication was reverified locally on 2026-10-20;
@@ -67,9 +114,11 @@ described by the system design.
 | Public marketing homepage rebuild in this checkout | Revised against Stitch — illustrative UI | 2026-10-17 |
 | Account and wedding setup screens | In progress — interactive UI prototype only | 2026-10-18 |
 | Email/password authentication | Implemented — signup, sign-in and logout verified against MongoDB; other Foundation work remains | 2026-10-18 |
-| Wedding creation and initial dashboard | Implemented — persistence and creator Admin membership; invitations and events remain preview-only | 2026-10-20 |
+| Wedding creation and initial dashboard | Implemented — persistence and creator Admin membership; events and invitations tracked in later follow-up entries | 2026-10-20 |
 | Wedding details edit and save | Implemented — edit form and role-authorized, membership-scoped PATCH; persistence round trip verified with disposable QA workspace | 2026-10-20 |
 | Homepage session-aware navigation | Implemented — signed-in users see account and wedding/setup links; signed-out users see sign-in/create-account links; verified with disposable account | 2026-10-20 |
+| Wedding event selection persistence | In progress — event creation/listing and timezone-aware setup persistence; local database readback passed; editing/archiving remain | 2026-10-20 |
+| Wedding member invitations and acceptance | In progress — hashed-token acceptance, Admin UI, revocation, and matching-email QA passed; Resend delivery awaits sender-domain setup | 2026-10-20 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -391,14 +440,22 @@ The user approved these screens in Stitch project `5169674594013355245`:
 - The homepage reads the current server session and displays the account and
   wedding/setup action while signed in, or the sign-in/create-account actions
   while signed out.
-- The existing planner and event steps remain clearly marked as previews; their
-  entries are not sent or saved. Focused request-schema tests were added.
+- Selected event names, dates, and local start times are saved as Event records;
+  the dashboard reads them back in the wedding time zone.
+- Admins can invite members through Resend, list/revoke pending invitations, and
+  view current members. Invitees use a high-entropy link, sign in or create an
+  account with the matching email, and accept into the wedding. Acceptance
+  creates membership and consumes the invitation in one MongoDB transaction.
+- Resend uses the existing `RESEND_API_KEY` plus `RESEND_FROM_EMAIL`; these are
+  server-only. Invitation tokens are HMAC-SHA-256 hashed with
+  `AUTH_TOKEN_PEPPER` and expire after seven days.
+- Focused invitation/event schema and timezone conversion tests were added.
 
 #### Validation
 
 - Implementation and documentation review completed against the PRD and API,
   database, and system design documents.
-- Lint, TypeScript, and all 7 focused tests passed with Node 24.19.0. The
+- Lint, TypeScript, and all 11 focused tests passed with Node 24.19.0. The
   production build was attempted but blocked by Windows `EPERM` writing build
   output while the local dev server was running; the dev server remains active.
 - Local API/database QA passed on 2026-10-20 after restarting the dev server to
@@ -414,10 +471,12 @@ The user approved these screens in Stitch project `5169674594013355245`:
 
 #### Remaining work
 
-- Implement and verify member invitations, acceptance, and revocation using the
-  existing Stitch member-management and invitation screens.
-- Implement persisted wedding events and update dashboard progress from saved
-  data. The event checkboxes are currently display-only.
+- Live QA remains for Resend delivery to a user-approved address, token
+  acceptance with the matching account, email-mismatch rejection, expiry,
+  revocation, and persisted event readback. The invitation feature is not marked
+  complete until these external/database flows are verified.
+- Follow-up event CRUD (editing and archiving), role changes/removal, and member
+  notification controls remain out of this increment.
 - Restart the local dev server after changing a Mongoose model so its cached
   schema is reloaded. QA found that the pre-change process accepted a create
   request but stripped fields from the saved document; the fresh-process rerun
@@ -1130,27 +1189,71 @@ Foundation phase remains in progress
 The homepage milestone is complete for its stated scope: responsive marketing UI
 with illustrative preview data. **The current product phase is Phase 1:
 Foundation** from the PRD. Authentication, wedding setup persistence, guarded
-dashboard, and wedding-detail editing are implemented. Member invitations remain
-pending. No later product phase is marked complete in this checkout.
+dashboard, and wedding-detail editing are implemented. Member invitation
+implementation and event selection persistence are in progress; live delivery
+and database workflow QA remain. No later product phase is marked complete in
+this checkout.
 
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
-| 1. Foundation | In progress — authentication, wedding setup, dashboard and editing implemented; member invitations remain pending | Signup, sign-in, logout, current-user lookup, persisted wedding setup, creator Admin membership, guarded dashboard and edit/save flow. Password recovery and member invitations remain pending. |
-| 2. Planning | Pending | Events and tasks |
+| 1. Foundation | In progress — auth, wedding, and local invitation acceptance implemented; Resend delivery pending | Signup/sign-in/logout, persisted wedding setup, creator Admin membership, member invitation/list/revoke/accept flow. Password recovery and verified-sender email delivery remain. |
+| 2. Planning | In progress — event setup persistence implemented; tasks pending | Persisted event selections and dashboard readback; event CRUD and task management remain. |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
 | 5. Wedding Experience | Pending | Wedding website, themes, YouTube livestream |
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
 
-**Recommended next increment:** implement member invitation and acceptance
-using the documented Wedding Members and Accept Invitation designs, then persist
-selected wedding events. Keep invitations and event selection visibly marked as
-preview-only until those server-backed flows are complete. The active localhost
-browser session currently lands on onboarding and has no wedding workspace;
-testing used a disposable QA workspace and did not modify the user's wedding
-data.
+**Recommended next increment:** verify Resend sender-domain readiness and run
+the invitation/acceptance and saved-event round trip with separate disposable
+accounts. The current local browser session has no wedding workspace; this
+implementation check did not create or modify any user wedding records.
+
+### Current checkout follow-up — member invitations and event persistence — 2026-10-20
+
+**Status:** In progress — local database workflows verified; Resend delivery
+awaits a verified sender domain
+
+#### Implemented scope
+
+- The setup wizard collects event names, local dates, and start times, converts
+  them using the wedding time zone, saves each Event through `POST /api/events`,
+  and displays persisted events on the dashboard.
+- Admins can view current members and pending invitations, send Manager
+  invitations through the server-only Resend adapter, and revoke pending invites.
+- Invitees can view a limited public invitation summary, then sign in/create an
+  account using the invited email and accept. Acceptance creates a
+  `WeddingMembership` and consumes the invitation in a MongoDB transaction.
+- Invitation tokens use 256-bit random secrets stored only as HMAC-SHA-256
+  hashes with `AUTH_TOKEN_PEPPER`; invites expire after seven days. Resend needs
+  both `RESEND_API_KEY` and `RESEND_FROM_EMAIL` configured server-side.
+- API validation, role checks, and wedding scoping follow the current product
+  design. No email token is logged or returned from invitation APIs.
+
+#### Validation
+
+- Lint and TypeScript passed; all 11 focused tests passed for event and
+  invitation schemas, token shape, and timezone conversion.
+- Local unauthenticated checks returned 401 for event/member APIs, 307 to login
+  for `/members`, and 404 for an invalid public invitation token.
+- Live local QA passed 13 checks using disposable owner and invitee accounts:
+  workspace and event persistence/readback, dashboard event display, public
+  invite summary, rejection for the wrong email, matching-email transactional
+  acceptance, invited-member workspace access, single-use enforcement, Admin
+  member list, invitation revocation, and disabled revoked links. All QA user,
+  wedding, event, invitation, membership, session, and per-email rate-limit
+  records were removed afterward.
+- A read-only Resend domains request accepted the configured API key but
+  returned zero domains. No email was sent and no member/event QA records were
+  created by the provider-configuration check.
+
+#### Remaining work
+
+- Verify a sender domain in Resend before invitations can be sent to arbitrary
+  recipients. Then verify actual email delivery using an authorized test
+  recipient. Expiry and duplicate-invite prevention also remain to be checked.
+- Event editing/archiving and member removal remain future work.
 
 For each feature increment, update this file in the same change: record its
 status and date, implemented scope, validation performed, and remaining work or
