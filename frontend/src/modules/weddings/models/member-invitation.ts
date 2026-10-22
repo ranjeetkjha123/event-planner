@@ -6,7 +6,7 @@ const memberInvitationSchema = new Schema({
   weddingId: { type: Schema.Types.ObjectId, required: true, ref: "Wedding" },
   email: { type: String, required: true, trim: true },
   emailNormalized: { type: String, required: true, lowercase: true, trim: true },
-  role: { type: String, required: true, enum: ["ADMIN", "MANAGER"] },
+  role: { type: String, required: true, enum: ["ADMIN", "MANAGER", "VIEWER"] },
   tokenHash: { type: String, required: true, unique: true, select: false },
   status: { type: String, required: true, enum: ["PENDING", "ACCEPTED", "REVOKED"], default: "PENDING" },
   invitedByUserId: { type: Schema.Types.ObjectId, required: true, ref: "User" },

@@ -21,7 +21,7 @@ export function InvitationAcceptance({ token, email, role, signedIn }: { token: 
   }
   return <div className="invite-acceptance">
     <p>This invitation was sent to <strong>{email}</strong> with the {role.toLowerCase()} role.</p>
-    {signedIn ? <button className="button button-primary" type="button" disabled={pending} onClick={() => void accept()}>{pending ? "Joining wedding…" : "Accept invitation"}</button> : <><p>Sign in or create an account with that email address, then reopen this invitation link.</p><div className="onboarding-actions"><a className="button button-primary" href="/signup">Create account</a><a className="button button-outline" href="/login">Sign in</a></div></>}
+    {signedIn ? <button className="button button-primary" type="button" disabled={pending} onClick={() => void accept()}>{pending ? "Joining wedding…" : "Accept invitation"}</button> : <><p>Sign in or create an account with the invited email address to continue.</p><div className="onboarding-actions"><a className="button button-primary" href={`/signup?inviteToken=${encodeURIComponent(token)}`}>Create account</a><a className="button button-outline" href={`/login?inviteToken=${encodeURIComponent(token)}`}>Sign in</a></div></>}
     {message && <p role="status" className="prototype-message">{message}</p>}
   </div>;
 }

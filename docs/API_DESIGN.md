@@ -852,7 +852,7 @@ This is preferable to requiring the frontend to make 8 independent requests.
 
 Authentication required.
 
-Admin and Manager can view members.
+Admin only. Viewer and Manager cannot use member-administration endpoints.
 
 ### Response
 
@@ -886,7 +886,7 @@ Admin and Manager can view members.
 ```json
 {
   "email": "rahul@example.com",
-  "role": "MANAGER"
+  "role": "VIEWER"
 }
 ```
 
@@ -915,7 +915,7 @@ Send email immediately through Resend
   "data": {
     "id": "invitationId",
     "email": "rahul@example.com",
-    "role": "MANAGER",
+    "role": "VIEWER",
     "status": "PENDING",
     "expiresAt": "..."
   }
@@ -931,6 +931,9 @@ Send email immediately through Resend
 Admin only.
 
 Returns pending invitations for the current Wedding.
+
+The `role` request field accepts `ADMIN`, `MANAGER`, or `VIEWER`; if omitted,
+it defaults to `VIEWER`.
 
 ---
 
@@ -964,7 +967,7 @@ Returns enough information to render the invitation page.
 {
   "data": {
     "email": "rahul@example.com",
-    "role": "MANAGER",
+    "role": "VIEWER",
     "wedding": {
       "brideName": "Princi",
       "groomName": "Akshay",
@@ -1005,7 +1008,7 @@ Mark invitation ACCEPTED
 {
   "data": {
     "weddingId": "...",
-    "role": "MANAGER"
+    "role": "VIEWER"
   }
 }
 ```
@@ -1040,11 +1043,14 @@ or:
 
 ```json
 {
-  "role": "MANAGER"
+  "role": "VIEWER"
 }
 ```
 
 Backend must ensure Wedding never ends with zero Admins.
+
+Viewer is also a supported role. Changing the last Admin to either Manager or
+Viewer is rejected.
 
 ---
 
@@ -3030,7 +3036,10 @@ Change Member Role
 Remove Member
 ```
 
-Everything else can be managed by ADMIN and MANAGER.
+Wedding details and events can be read by all wedding roles. ADMIN and MANAGER
+can perform the currently implemented wedding and event write operations;
+VIEWER is read-only. Future feature endpoints must apply the role policy defined
+by the PRD before exposing write access.
 
 This should be represented by reusable authorization middleware/helper logic.
 

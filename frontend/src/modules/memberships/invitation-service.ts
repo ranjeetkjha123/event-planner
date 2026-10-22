@@ -18,7 +18,7 @@ export class MemberInvitationError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "MemberInvitationError"; }
 }
 
-export async function createMemberInvitation(input: { userId: string; weddingId: string; inviterId: string; email: string; role: "ADMIN" | "MANAGER"; origin: string }) {
+export async function createMemberInvitation(input: { userId: string; weddingId: string; inviterId: string; email: string; role: "ADMIN" | "MANAGER" | "VIEWER"; origin: string }) {
   await connectToDatabase();
   const emailNormalized = input.email.trim().toLowerCase();
   const email = input.email.trim();
@@ -91,7 +91,7 @@ export async function acceptInvitation(input: { token: string; userId: string; n
   await connectToDatabase();
   const session = await mongoose.startSession();
   try {
-    let role: "ADMIN" | "MANAGER" | undefined;
+    let role: "ADMIN" | "MANAGER" | "VIEWER" | undefined;
     await session.withTransaction(async () => {
       const invitation = await WeddingMemberInvitation.findOne({ tokenHash: hashToken(input.token) }).session(session);
       if (!invitation || invitation.status === "REVOKED") throw new MemberInvitationError("INVALID_TOKEN", "This invitation is invalid or no longer available.");

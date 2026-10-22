@@ -6,7 +6,7 @@ import { localDateTimeToIso } from "@/modules/events/event-time";
 
 const eventOptions = ["Engagement", "Mehendi", "Haldi", "Sangeet", "Cocktail", "Wedding", "Reception"];
 const eventTypes: Record<string, string> = { Engagement: "ENGAGEMENT", Mehendi: "MEHENDI", Haldi: "HALDI", Sangeet: "SANGEET", Cocktail: "COCKTAIL", Wedding: "WEDDING", Reception: "RECEPTION" };
-type Member = { email: string; role: "MANAGER" };
+type Member = { email: string; role: "ADMIN" | "MANAGER" | "VIEWER" };
 type SetupEvent = { name: string; type: string; date: string; time: string };
 
 export function OnboardingWizard() {
@@ -14,6 +14,7 @@ export function OnboardingWizard() {
   const router = useRouter();
   const [couple, setCouple] = useState({ bride: "", groom: "", title: "", description: "", date: "", city: "", timeZone: "Asia/Kolkata" });
   const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<Member["role"]>("VIEWER");
   const [members, setMembers] = useState<Member[]>([]);
   const [events, setEvents] = useState<SetupEvent[]>([{ name: "Wedding", type: "WEDDING", date: "", time: "10:00" }]);
   const [customEvent, setCustomEvent] = useState("");
@@ -37,8 +38,9 @@ export function OnboardingWizard() {
   function addMember(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;
-    setMembers((current) => current.some((member) => member.email.toLowerCase() === email.trim().toLowerCase()) ? current : [...current, { email: email.trim(), role: "MANAGER" }]);
+    setMembers((current) => current.some((member) => member.email.toLowerCase() === email.trim().toLowerCase()) ? current : [...current, { email: email.trim(), role: inviteRole }]);
     setEmail("");
+    setInviteRole("VIEWER");
   }
 
   function toggleEvent(value: string) {
@@ -130,9 +132,9 @@ export function OnboardingWizard() {
           </div>}
           {step === 2 && <div>
             <p className="foundation-eyebrow">STEP 2 · FAMILY &amp; PLANNERS</p><h2>Plan better, together</h2><p className="onboarding-description">Invite family and friends who will help organize your wedding. You can also do this later.</p>
-            <form className="invite-form" onSubmit={addMember}><label htmlFor="planner-email">Their email address</label><div><input id="planner-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="family@example.com" /><button className="button button-outline" type="submit">Add planner <span aria-hidden="true">＋</span></button></div></form>
+            <form className="invite-form" onSubmit={addMember}><label htmlFor="planner-email">Their email address</label><div><input id="planner-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="family@example.com" /><select aria-label="Invitation role" value={inviteRole} onChange={(event) => setInviteRole(event.target.value as Member["role"])}><option value="VIEWER">Viewer · read only</option><option value="MANAGER">Manager</option><option value="ADMIN">Admin</option></select><button className="button button-outline" type="submit">Add planner <span aria-hidden="true">＋</span></button></div></form>
             <div className="member-preview"><div className="member-row"><span className="member-avatar">✿</span><div><strong>Workspace creator</strong><small>Becomes the first Wedding Admin</small></div><span className="role-pill role-admin">ADMIN</span></div>
-              {members.map((member, index) => <div className="member-row" key={`${member.email}-${index}`}><span className="member-avatar member-avatar-gold">{member.email.slice(0, 1).toUpperCase()}</span><div><strong>{member.email}</strong><small>Can help plan and manage the wedding</small></div><span className="role-pill">MANAGER</span><button className="remove-member" type="button" aria-label={`Remove ${member.email}`} onClick={() => setMembers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}
+              {members.map((member, index) => <div className="member-row" key={`${member.email}-${index}`}><span className="member-avatar member-avatar-gold">{member.email.slice(0, 1).toUpperCase()}</span><div><strong>{member.email}</strong><small>{member.role === "VIEWER" ? "Can view wedding plans and events" : "Can help plan and manage the wedding"}</small></div><span className="role-pill">{member.role}</span><button className="remove-member" type="button" aria-label={`Remove ${member.email}`} onClick={() => setMembers((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}
               {members.length === 0 && <p className="empty-invites">Add a co-planner above, or continue and invite them later.</p>}
             </div>
             <p className="permission-note"><span aria-hidden="true">ⓘ</span> Your account becomes the first Admin. Invitations are emailed after the wedding workspace is created; each invitee accepts with the matching account email.</p>

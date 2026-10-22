@@ -797,7 +797,7 @@ WeddingMembership {
 
     weddingId: ObjectId,
 
-    role: "ADMIN" | "MANAGER",
+    role: "ADMIN" | "MANAGER" | "VIEWER",
 
     joinedAt: Date,
 
@@ -901,7 +901,7 @@ WeddingMemberInvitation {
     email: String,
     emailNormalized: String,
 
-    role: "ADMIN" | "MANAGER",
+    role: "ADMIN" | "MANAGER" | "VIEWER",
 
     tokenHash: String,
 

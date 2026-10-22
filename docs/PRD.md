@@ -100,7 +100,7 @@ They will collectively be called:
 
 # 4. User Types
 
-There are only three user types in V1.
+There are four user types in V1.
 
 ## 4.1 Admin
 
@@ -152,7 +152,17 @@ Everything else remains accessible.
 
 ---
 
-## 4.3 Guest
+## 4.3 Viewer
+
+Viewers are invited wedding members with read-only access. They can view the
+wedding workspace and its saved details and events, but cannot change wedding
+details, create or change events, or administer members. New invitations default
+to Viewer; an Admin may deliberately choose Manager or Admin when inviting or
+change a member's role later.
+
+---
+
+## 4.4 Guest
 
 Guests do not have accounts.
 
@@ -485,6 +495,10 @@ Possible roles:
 
 - Admin
 - Manager
+- Viewer (read-only)
+
+New invitations default to Viewer. Admins select the intended role when sending
+an invitation; the selected role is applied when the invitee accepts it.
 
 An invitation should be sent through email.
 

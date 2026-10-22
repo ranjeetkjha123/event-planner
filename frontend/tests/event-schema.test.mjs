@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createEventSchema } from "../src/modules/events/event-schema.ts";
+import { createEventSchema, updateEventSchema } from "../src/modules/events/event-schema.ts";
 import { localDateTimeToIso } from "../src/modules/events/event-time.ts";
 
 test("event creation validates dates and rejects caller-selected wedding scope", () => {
@@ -15,4 +15,12 @@ test("wedding local event times convert using the selected time zone", () => {
   assert.equal(localDateTimeToIso("2027-02-14", "10:00", "America/New_York"), "2027-02-14T15:00:00.000Z");
   assert.throws(() => localDateTimeToIso("2027-02-30", "10:00", "Asia/Kolkata"), RangeError);
   assert.throws(() => localDateTimeToIso("2027-03-14", "02:30", "America/New_York"), RangeError);
+});
+
+test("event updates accept partial fields and clearing the optional end time", () => {
+  assert.equal(updateEventSchema.safeParse({ name: "Updated reception" }).success, true);
+  assert.equal(updateEventSchema.safeParse({ endsAt: null }).success, true);
+  assert.equal(updateEventSchema.safeParse({ endsAt: "2027-02-12T14:30:00Z" }).success, true);
+  assert.equal(updateEventSchema.safeParse({}).success, false);
+  assert.equal(updateEventSchema.safeParse({ weddingId: "not-client-controlled" }).success, false);
 });

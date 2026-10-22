@@ -14,7 +14,7 @@ export async function updateWeddingMemberRole(input: {
   weddingId: string;
   membershipId: string;
   actorUserId: string;
-  role: "ADMIN" | "MANAGER";
+  role: "ADMIN" | "MANAGER" | "VIEWER";
 }) {
   await connectToDatabase();
   if (!Types.ObjectId.isValid(input.membershipId)) throw new MembershipError("NOT_FOUND", "Wedding member not found.");
@@ -37,7 +37,7 @@ export async function updateWeddingMemberRole(input: {
       if (!target) throw new MembershipError("NOT_FOUND", "Wedding member not found.");
       if (target.role === input.role) return;
 
-      if (target.role === "ADMIN" && input.role === "MANAGER") {
+      if (target.role === "ADMIN" && input.role !== "ADMIN") {
         const adminCount = await WeddingMembership.countDocuments({ weddingId, role: "ADMIN" }).session(session);
         if (adminCount <= 1) throw new MembershipError("LAST_ADMIN", "This wedding must keep at least one Admin.");
       }

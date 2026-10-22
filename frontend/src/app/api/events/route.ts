@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 import { getCurrentUser, UnauthenticatedError } from "@/modules/auth/current-user-service";
 import { createEventSchema } from "@/modules/events/event-schema";
-import { createWeddingEvent, listWeddingEvents, WeddingMembershipRequiredError } from "@/modules/events/event-service";
+import { createWeddingEvent, listWeddingEvents, WeddingMembershipRequiredError, WeddingReadOnlyError } from "@/modules/events/event-service";
 import { SESSION_COOKIE_NAME } from "@/server/auth/session-token";
 import { isSameOriginRequest } from "@/server/auth/same-origin";
 import { readJsonBody } from "@/server/http/request-body";
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   try { return Response.json({ data: await createWeddingEvent(current.user.id, parsed.data) }, { status: 201, headers: { "Cache-Control": "private, no-store" } }); }
   catch (error) {
     if (error instanceof WeddingMembershipRequiredError) return Response.json({ error: { code: "NOT_FOUND", message: error.message } }, { status: 404 });
+    if (error instanceof WeddingReadOnlyError) return Response.json({ error: { code: "FORBIDDEN", message: error.message } }, { status: 403 });
     return Response.json({ error: { code: "INTERNAL_ERROR", message: "Unable to create event." } }, { status: 500 });
   }
 }

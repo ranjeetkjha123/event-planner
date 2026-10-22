@@ -529,6 +529,7 @@ Roles:
 ```text
 ADMIN
 MANAGER
+VIEWER
 ```
 
 ---
@@ -556,6 +557,12 @@ Cannot:
 - Invite Wedding Members
 - Remove Wedding Members
 - Modify Wedding Member roles
+
+### Viewer
+
+Can read the wedding workspace, wedding details, and event list. Cannot create
+or modify wedding details, events, or member administration. New invitations
+default to VIEWER; an Admin explicitly chooses a different role when needed.
 
 ---
 

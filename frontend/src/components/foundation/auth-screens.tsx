@@ -34,11 +34,12 @@ const copy = {
   },
 } satisfies Record<AuthMode, { eyebrow: string; title: string; description: string; button: string; foot: string; footLink: string; footHref: string }>;
 
-export function AuthScreen({ mode }: { mode: AuthMode }) {
+export function AuthScreen({ mode, invitationToken }: { mode: AuthMode; invitationToken?: string }) {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const text = copy[mode];
+  const authSwitchHref = invitationToken ? `${text.footHref}?inviteToken=${encodeURIComponent(invitationToken)}` : text.footHref;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +82,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
       await currentUserResponse.json();
       setIsSuccess(true);
-      window.location.assign("/onboarding");
+      window.location.assign(invitationToken ? `/member-invitations/${encodeURIComponent(invitationToken)}` : "/onboarding");
     } catch {
       setMessage("Unable to reach the account service. Please try again.");
     } finally {
@@ -114,7 +115,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           {message && <p className="prototype-message" role={isSuccess ? "status" : "alert"}>{message}</p>}
           <div className="auth-divider"><span>PRIVATE BY DESIGN</span></div>
           <p className="auth-assurance"><span aria-hidden="true">✓</span> Guests can RSVP without creating an account.</p>
-          <p className="auth-switch">{text.foot} <a href={text.footHref}>{text.footLink}</a></p>
+          <p className="auth-switch">{text.foot} <a href={authSwitchHref}>{text.footLink}</a></p>
         </div>
       </section>
       <footer className="foundation-footer"><span>Make My Marriage</span><span>One shared place for your wedding plans.</span></footer>
