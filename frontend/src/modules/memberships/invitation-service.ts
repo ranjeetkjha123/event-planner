@@ -66,6 +66,16 @@ export async function listWeddingMembers(weddingId: string) {
   });
 }
 
+export async function listWeddingTaskAssignees(weddingId: string, membershipIds?: string[]) {
+  await connectToDatabase();
+  const filter: Record<string, unknown> = { weddingId: new Types.ObjectId(weddingId) };
+  if (membershipIds) filter._id = { $in: membershipIds.map((id) => new Types.ObjectId(id)) };
+  const memberships = await WeddingMembership.find(filter).select("userId role").lean();
+  const users = memberships.length ? await User.find({ _id: { $in: memberships.map((member) => member.userId) } }).select("name").lean() : [];
+  const usersById = new Map(users.map((user) => [user._id.toString(), user]));
+  return memberships.map((member) => ({ membershipId: member._id.toString(), name: usersById.get(member.userId.toString())?.name ?? "Former member", role: member.role }));
+}
+
 export async function listPendingInvitations(weddingId: string) {
   await connectToDatabase();
   return WeddingMemberInvitation.find({ weddingId: new Types.ObjectId(weddingId), status: "PENDING", expiresAt: { $gt: new Date() } }).select("email role status expiresAt createdAt").sort({ createdAt: -1 }).lean().then((items) => items.map((item) => ({ id: item._id.toString(), email: item.email, role: item.role, status: item.status, expiresAt: item.expiresAt.toISOString() })));

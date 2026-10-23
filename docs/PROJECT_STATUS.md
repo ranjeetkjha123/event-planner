@@ -1,6 +1,31 @@
 # Make My Marriage — Project Status
 
-**Last updated:** 2026-10-22
+**Last updated:** 2026-10-23
+
+### Follow-up — task management and dashboard — 2026-10-23
+
+- Added the wedding-scoped `tasks` collection and indexes, validated CRUD APIs,
+  assignment to current wedding members, active-event association, pagination,
+  status/priority/member/event filters, and optimistic update conflict checks.
+- Added the `/tasks` screen for Admins and Managers to create, edit, complete,
+  filter, assign, and delete tasks. Viewers can read tasks but cannot change
+  them. The dashboard now shows task completion progress and up to five tasks
+  due today or later, using the wedding time zone.
+- Updated same-origin verification to respect the request Host and forwarded
+  protocol, so local `localhost` and `127.0.0.1` origins both pass when matched.
+- Validation: 19 focused tests passed, ESLint and TypeScript passed, and
+  `git diff --check` passed. Local HTTP checks confirmed signed-out redirects,
+  task API authentication, invalid-filter validation, and mismatched-origin
+  rejection. Signed-in Admin QA verified login, task screen rendering, create,
+  readback, edit/complete, dashboard summary rendering, delete, and cleanup
+  against MongoDB. The temporary QA task was confirmed absent after deletion.
+- Documentation note: `API_DESIGN.md` contains an older note calling task API
+  behavior implemented, but the prior checkout had no task module or routes.
+  Its contract was followed; that older status wording does not prove prior
+  implementation in this checkout.
+- Remaining: verify Viewer read-only behavior, Manager writes, assignment and
+  event association, and cross-wedding rejection with disposable memberships
+  and event data. Production deployment has not been verified.
 
 ### Follow-up — workspace section navigation — 2026-10-22
 
@@ -126,7 +151,9 @@ homepage is the first current product UI increment; email/password accounts and
 MongoDB sessions are implemented and have passed a live local smoke check.
 Wedding creation, editing, session-aware navigation, event persistence, and the
 member invitation flow are implemented in this checkout. Invitation delivery
-and acceptance still need live end-to-end QA with separate accounts.
+and acceptance still need live end-to-end QA with separate accounts. Task CRUD
+and the dashboard task summary are implemented, and signed-in Admin persistence
+passed local QA; Manager, Viewer, and cross-wedding association checks remain.
 
 This is the ongoing record of major development milestones. Read it before
 starting development and update it whenever a major feature is implemented or
@@ -143,9 +170,11 @@ persists the wedding plus its creator's Admin membership. Wedding details,
 member invitations/roles, and event creation/editing/archiving are membership-
 scoped. The public homepage reads the server session and switches between
 account/workspace actions and signed-out account links. Invitation acceptance
-joins the authenticated user atomically to the wedding. The health endpoint
-returns application health only and does not verify MongoDB or provider
-connectivity.
+joins the authenticated user atomically to the wedding. Wedding-scoped task
+CRUD, current-member/event assignment checks, filters, and a dashboard task
+summary are implemented; signed-in Admin persistence passed local QA, while
+Manager, Viewer, and cross-wedding behavior remain to verify. The health endpoint
+returns application health only and does not verify MongoDB or provider connectivity.
 
 The dated milestone table and detailed entries below preserve earlier reported
 work. Current account authentication was reverified locally on 2026-10-20;
@@ -178,6 +207,7 @@ described by the system design.
 | Homepage session-aware navigation | Implemented — signed-in users see account and wedding/setup links; signed-out users see sign-in/create-account links; verified with disposable account | 2026-10-20 |
 | Wedding event management | Implemented — creation, listing, editing, and soft archive; browser edit/archive QA passed | 2026-10-22 |
 | Wedding member invitations and acceptance | In progress — hashed-token acceptance, Admin UI, revocation, and matching-email QA passed; Resend delivery awaits sender-domain setup | 2026-10-20 |
+| Wedding task management and dashboard summary | Implemented — signed-in Admin CRUD and dashboard persistence QA passed locally; other roles and tenant boundaries remain | 2026-10-23 |
 
 Dates above record when progress was documented or verified, rather than
 asserting the original creation date of earlier work.
@@ -1246,29 +1276,28 @@ Foundation phase remains in progress
 ## Upcoming development
 
 The homepage milestone is complete for its stated scope: responsive marketing UI
-with illustrative preview data. **The current product phase is Phase 1:
-Foundation** from the PRD. Authentication, wedding setup persistence, guarded
-dashboard, and wedding-detail editing are implemented. Member invitation
-implementation and event selection persistence are in progress; live delivery
-and database workflow QA remain. No later product phase is marked complete in
-this checkout.
+with illustrative preview data. **The current product phases are Phase 1:
+Foundation and Phase 2: Planning, both in progress.** Authentication, wedding
+setup persistence, guarded dashboard, wedding-detail editing, event CRUD, and
+the first task-management increment are implemented. Invitation delivery and
+authenticated task persistence still need end-to-end verification. No later
+product phase is marked complete in this checkout.
 
 | PRD phase | Status in this checkout | Scope |
 | --- | --- | --- |
 | Homepage design | Complete — illustrative UI | Stitch-aligned marketing page; no product workflows |
 | 1. Foundation | In progress — auth, wedding, and local invitation acceptance implemented; Resend delivery pending | Signup/sign-in/logout, persisted wedding setup, creator Admin membership, member invitation/list/revoke/accept flow. Password recovery and verified-sender email delivery remain. |
-| 2. Planning | In progress — event CRUD implemented; task management pending | Persisted, editable, and archivable events; task CRUD and dashboard task summaries remain. |
+| 2. Planning | In progress — event CRUD and task management implemented; signed-in Admin task flow verified locally | Event CRUD, wedding-scoped task CRUD, assignment, filters, and dashboard task summary. |
 | 3. Guests | Pending | Guest management, invitations, RSVP, email, WhatsApp sharing |
 | 4. Financial and Vendors | Pending | Expenses, vendor management and discovery |
 | 5. Wedding Experience | Pending | Wedding website, themes, YouTube livestream |
 | 6. Memories | Pending | Gallery, guest uploads, albums, private sharing, QR code |
 | 7. Production Readiness | Pending | Error handling, security, responsive review, performance, testing, analytics, deployment, monitoring |
 
-**Recommended next increment:** implement task management: wedding-scoped task
-CRUD, assignment to current-wedding members, optional active-event association,
-due date, priority, status, and dashboard summary. The invitation flow still
-needs separate invitee acceptance QA and verified-sender delivery; keep that as
-a Foundation follow-up alongside task work.
+**Recommended next increment:** verify task management with Manager and Viewer
+memberships, including role permissions, member/event association validation,
+and cross-wedding isolation. Keep separate invitee acceptance QA and
+verified-sender delivery as Foundation follow-ups.
 
 ### Current checkout follow-up — member invitations and event persistence — 2026-10-20
 

@@ -1,8 +1,9 @@
-type WorkspaceSection = "overview" | "events" | "members";
+type WorkspaceSection = "overview" | "events" | "tasks" | "members";
 
 const sections: { id: WorkspaceSection; label: string; href: string }[] = [
   { id: "overview", label: "Overview", href: "/dashboard" },
   { id: "events", label: "Events", href: "/events" },
+  { id: "tasks", label: "Tasks", href: "/tasks" },
   { id: "members", label: "Members", href: "/members" },
 ];
 

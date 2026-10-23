@@ -102,3 +102,14 @@ export async function archiveWeddingEvent(userId: string, eventId: string) {
   );
   if (!event) throw new EventNotFoundError();
 }
+
+export async function isActiveWeddingEvent(weddingId: string, eventId: string) {
+  await connectToDatabase();
+  return Boolean(await Event.exists({ _id: new Types.ObjectId(eventId), weddingId: new Types.ObjectId(weddingId), archivedAt: null }));
+}
+
+export async function getWeddingEventSummaries(weddingId: string, eventIds: string[]) {
+  await connectToDatabase();
+  const events = await Event.find({ _id: { $in: eventIds.map((id) => new Types.ObjectId(id)) }, weddingId: new Types.ObjectId(weddingId) }).select("name archivedAt").lean();
+  return events.map((event) => ({ id: event._id.toString(), name: event.name, archivedAt: event.archivedAt?.toISOString() ?? null }));
+}

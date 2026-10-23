@@ -7,6 +7,7 @@ import { listWeddingEvents } from "@/modules/events/event-service";
 import { SESSION_COOKIE_NAME } from "@/server/auth/session-token";
 import { SignOutButton } from "@/components/foundation/sign-out-button";
 import { WorkspaceNavigation } from "@/components/foundation/workspace-navigation";
+import { getWeddingTaskSummary } from "@/modules/tasks/task-service";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ updated?: string }> }) {
   let current;
@@ -20,7 +21,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!current.wedding) redirect("/onboarding");
   const wedding = await getWeddingForUser(current.user.id);
   if (!wedding) redirect("/onboarding");
-  const events = await listWeddingEvents(current.user.id);
+  const [events, taskSummary] = await Promise.all([listWeddingEvents(current.user.id), getWeddingTaskSummary(current.user.id, wedding.timeZone)]);
   const params = await searchParams;
 
   return (
@@ -46,7 +47,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           {wedding.description && <p className="onboarding-description">{wedding.description}</p>}
         </article>
         <article className="onboarding-card dashboard-events-card"><div className="dashboard-card-heading"><div><p className="foundation-eyebrow">YOUR CELEBRATIONS</p><h2>Wedding events</h2></div><div className="dashboard-actions"><span className="event-count">{events.length} saved</span><a className="button button-outline dashboard-edit-link" href="/events">Manage events</a></div></div>{events.length ? <ul className="saved-event-list">{events.map((event) => <li key={event.id}><span><strong>{event.name}</strong><small>{event.type}</small></span><time dateTime={event.startsAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: wedding.timeZone }).format(new Date(event.startsAt))}</time></li>)}</ul> : <p className="empty-invites">No events saved yet.</p>}</article>
-        <p className="prototype-banner"><span aria-hidden="true">✿</span> Wedding details, saved events, and wedding members are ready to plan together.</p>
+        <article className="onboarding-card dashboard-tasks-card"><div className="dashboard-card-heading"><div><p className="foundation-eyebrow">PLANNING PROGRESS</p><h2>Wedding tasks</h2></div><div className="dashboard-actions"><span className="event-count">{taskSummary.completed} of {taskSummary.total} complete</span><a className="button button-outline dashboard-edit-link" href="/tasks">Manage tasks</a></div></div><div className="task-progress-track" role="progressbar" aria-label="Wedding tasks completed" aria-valuemin={0} aria-valuemax={taskSummary.total || 1} aria-valuenow={taskSummary.completed}><span style={{ width: `${taskSummary.total ? Math.round(taskSummary.completed / taskSummary.total * 100) : 0}%` }} /></div><p className="task-progress-caption">{taskSummary.total ? `${taskSummary.total - taskSummary.completed} tasks still to do` : "Create your first task to start planning together."}</p>{taskSummary.upcoming.length ? <><h3 className="upcoming-task-title">Coming up</h3><ul className="saved-event-list upcoming-task-list">{taskSummary.upcoming.map((task) => <li key={task.id}><span><strong>{task.title}</strong><small>{task.assignee?.name ?? "Unassigned"}{task.event ? ` · ${task.event.name}` : ""}</small></span><time dateTime={task.dueDate ?? undefined}>{task.dueDate ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: wedding.timeZone }).format(new Date(task.dueDate)) : "No due date"}</time></li>)}</ul></> : taskSummary.total > 0 && <p className="empty-invites">No upcoming due dates.</p>}</article>
+      <p className="prototype-banner"><span aria-hidden="true">✿</span> Wedding details, events, tasks, and members are ready to plan together.</p>
       </section>
       <footer className="foundation-footer"><span>Make My Marriage</span><span>One shared place for your wedding plans.</span></footer>
     </main>

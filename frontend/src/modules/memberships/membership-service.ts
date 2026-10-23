@@ -10,6 +10,17 @@ export class MembershipError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "MembershipError"; }
 }
 
+export async function getWeddingMembershipForUser(userId: string) {
+  await connectToDatabase();
+  const membership = await WeddingMembership.findOne({ userId: new Types.ObjectId(userId) }).select("_id weddingId role").lean();
+  return membership ? { id: membership._id.toString(), weddingId: membership.weddingId.toString(), role: membership.role } : null;
+}
+
+export async function isWeddingMember(weddingId: string, membershipId: string) {
+  await connectToDatabase();
+  return Boolean(await WeddingMembership.exists({ _id: new Types.ObjectId(membershipId), weddingId: new Types.ObjectId(weddingId) }));
+}
+
 export async function updateWeddingMemberRole(input: {
   weddingId: string;
   membershipId: string;
