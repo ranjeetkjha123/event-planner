@@ -2,6 +2,20 @@
 
 **Last updated:** 2026-10-22
 
+### Follow-up — workspace section navigation — 2026-10-22
+
+- Added consistent navigation between the wedding Overview, Events, and Admin-
+  only Members sections. The dashboard remains the workspace landing page and
+  links directly to the existing event-management flow; non-Admin members do
+  not see a Members navigation entry.
+- Validation: all 14 tests, ESLint, TypeScript, and `git diff --check` passed.
+  Started Next.js on `127.0.0.1:3100` with Webpack after the default port/dev
+  lock was unavailable. HTTP checks returned 200 for login, redirected
+  unauthenticated dashboard/events/members pages to login, and returned 401
+  from the events API. No wedding data was read or changed.
+- Remaining: signed-in visual QA under Admin, Manager, and Viewer accounts;
+  the current browser automation session did not grant desktop access.
+
 ### Follow-up — invitation role and invited-user flow — 2026-10-22
 
 - Added the `VIEWER` wedding role with read-only access to the dashboard,

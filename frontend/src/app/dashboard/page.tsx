@@ -6,6 +6,7 @@ import { getWeddingForUser } from "@/modules/weddings/create-wedding-service";
 import { listWeddingEvents } from "@/modules/events/event-service";
 import { SESSION_COOKIE_NAME } from "@/server/auth/session-token";
 import { SignOutButton } from "@/components/foundation/sign-out-button";
+import { WorkspaceNavigation } from "@/components/foundation/workspace-navigation";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ updated?: string }> }) {
   let current;
@@ -28,6 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <a className="brand" href="/" aria-label="Make My Marriage home"><span className="brand-icon" aria-hidden="true">♡</span><span>Make My <b>Marriage</b></span></a>
         <div className="onboarding-help"><span>Your account · {current.user.name}</span> <SignOutButton /></div>
       </header>
+      <WorkspaceNavigation active="overview" role={current.membership?.role ?? "VIEWER"} />
       <section className="onboarding-wrap">
         <div className="onboarding-heading"><p className="foundation-eyebrow">YOUR WEDDING WORKSPACE</p><h1>{wedding.title}</h1><p>Your wedding workspace is saved and ready for the next planning steps.</p></div>
         <article className="onboarding-card dashboard-wedding-card">
