@@ -27,7 +27,7 @@ export default async function EventsPage() {
     <WorkspaceNavigation active="events" role={current.membership?.role ?? "VIEWER"} />
     <section className="onboarding-wrap">
       <div className="onboarding-heading"><p className="foundation-eyebrow">YOUR WEDDING WORKSPACE</p><h1>Wedding events</h1><p>Keep celebration details and timings up to date.</p></div>
-      <article className="onboarding-card wedding-edit-card"><div className="dashboard-card-heading"><div><p className="foundation-eyebrow">EVENTS &amp; TRADITIONS</p><h2>Active events</h2></div><span className="event-count">{events.length} saved</span></div><p className="onboarding-description">Times are shown in {wedding.timeZone}. Archiving keeps existing event references intact.</p><EventManager initialEvents={events} timeZone={wedding.timeZone} canEdit={current.membership?.role !== "VIEWER"} /></article>
+      <article className="onboarding-card wedding-edit-card"><div className="dashboard-card-heading"><div><p className="foundation-eyebrow">EVENTS &amp; TRADITIONS</p><h2>Active events</h2></div></div><p className="onboarding-description">Times are shown in {wedding.timeZone}. Archiving keeps existing event references intact.</p><EventManager initialEvents={events} timeZone={wedding.timeZone} canEdit={current.membership?.role !== "VIEWER"} /></article>
       <p className="prototype-banner"><span aria-hidden="true">✿</span> Changes are saved to your wedding workspace.</p>
     </section>
     <footer className="foundation-footer"><span>Make My Marriage</span><span>One shared place for your wedding plans.</span></footer>

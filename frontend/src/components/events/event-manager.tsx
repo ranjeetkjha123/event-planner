@@ -44,22 +44,24 @@ function eventPayload(form: FormData, timeZone: string) {
 export function EventManager({ initialEvents, timeZone, canEdit }: { initialEvents: WeddingEvent[]; timeZone: string; canEdit: boolean }) {
   const [events, setEvents] = useState(initialEvents);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function save(event: React.FormEvent<HTMLFormElement>, id: string) {
+  async function save(event: React.FormEvent<HTMLFormElement>, id?: string) {
     event.preventDefault();
     if (busyId) return;
-    setBusyId(id);
+    setBusyId(id ?? "new");
     setMessage("");
     try {
       const form = new FormData(event.currentTarget);
-      const response = await fetch(`/api/events/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(eventPayload(form, timeZone)) });
+      const response = await fetch(id ? `/api/events/${id}` : "/api/events", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(eventPayload(form, timeZone)) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message ?? "Unable to save event.");
-      setEvents((current) => current.map((item) => item.id === id ? result.data : item).sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+      setEvents((current) => (id ? current.map((item) => item.id === id ? result.data : item) : [...current, result.data]).sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
       setEditingId(null);
-      setMessage("Event changes saved.");
+      setCreateOpen(false);
+      setMessage(id ? "Event changes saved." : "Event added to your wedding workspace.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save event.");
     } finally { setBusyId(null); }
@@ -82,7 +84,21 @@ export function EventManager({ initialEvents, timeZone, canEdit }: { initialEven
 
   return <>
     {message && <p className="dashboard-saved-message" role="status">{message}</p>}
-    {events.length === 0 ? <p className="empty-invites">No active events. Add events during wedding setup.</p> : <ul className="managed-event-list">{events.map((item) => <li className="managed-event" key={item.id}>
+    {canEdit && <div className="dashboard-card-heading"><p>{events.length ? "Build your wedding schedule with the people, places, and timing for each celebration." : "Start your wedding schedule by adding the celebrations your family plans to host."}</p><span className="event-count">{events.length} saved</span><button className="button button-primary" type="button" onClick={() => { setCreateOpen((open) => !open); setEditingId(null); setMessage(""); }}>{createOpen ? "Close form" : "Add event"}</button></div>}
+    {createOpen && canEdit && <form className="managed-event-form managed-event-create" onSubmit={(event) => void save(event)}>
+      <div className="couple-fields">
+        <label>Event name<input name="name" maxLength={120} required placeholder="Mehendi celebration" /></label>
+        <label>Type<select name="type" defaultValue="MEHENDI">{eventTypes.map((type) => <option key={type} value={type}>{type[0]}{type.slice(1).toLowerCase()}</option>)}</select></label>
+        <label>Starts at<input name="startsAt" type="datetime-local" required /></label>
+        <label>Ends at (optional)<input name="endsAt" type="datetime-local" /></label>
+        <label>Venue<input name="venueName" maxLength={200} placeholder="Add when confirmed" /></label>
+        <label>Address<input name="address" maxLength={300} placeholder="Add when confirmed" /></label>
+        <label>Dress code<input name="dressCode" maxLength={120} placeholder="Optional" /></label>
+      </div>
+      <label className="wedding-description-field">Description<textarea name="description" maxLength={2000} rows={3} placeholder="What guests and family should know about this celebration." /></label>
+      <div className="wedding-edit-actions"><button className="button button-outline" type="button" onClick={() => setCreateOpen(false)}>Cancel</button><button className="button button-primary" type="submit" disabled={busyId === "new"}>{busyId === "new" ? "Saving…" : "Save event"}</button></div>
+    </form>}
+    {events.length === 0 ? !createOpen && <p className="empty-invites">No active events yet.</p> : <ul className="managed-event-list">{events.map((item) => <li className="managed-event" key={item.id}>
       {editingId === item.id ? <form className="managed-event-form" onSubmit={(event) => void save(event, item.id)}>
         <label>Event name<input name="name" defaultValue={item.name} maxLength={120} required /></label>
         <div className="couple-fields">
@@ -96,7 +112,7 @@ export function EventManager({ initialEvents, timeZone, canEdit }: { initialEven
         <label className="wedding-description-field">Description<textarea name="description" defaultValue={item.description} maxLength={2000} rows={3} /></label>
         <div className="wedding-edit-actions"><button className="button button-outline" type="button" onClick={() => setEditingId(null)}>Cancel</button><button className="button button-primary" type="submit" disabled={busyId === item.id}>{busyId === item.id ? "Saving…" : "Save event"}</button></div>
       </form> : <>
-        <div className="managed-event-summary"><div><strong>{item.name}</strong><small>{item.type ?? "Custom event"}{item.venueName ? ` · ${item.venueName}` : ""}</small></div><time dateTime={item.startsAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(item.startsAt))}</time></div>
+        <div className="managed-event-summary"><div><strong>{item.name}</strong><small>{item.type ?? "Custom event"}{item.venueName ? ` · ${item.venueName}` : ""}</small>{item.description && <small>{item.description}</small>}</div><time dateTime={item.startsAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(item.startsAt))}</time></div>
         {canEdit && <div className="managed-event-actions"><button className="button button-outline" type="button" onClick={() => { setEditingId(item.id); setMessage(""); }}>Edit</button><button className="text-button" type="button" disabled={busyId === item.id} onClick={() => void archive(item)}>{busyId === item.id ? "Archiving…" : "Archive"}</button></div>}
       </>}
     </li>)}</ul>}

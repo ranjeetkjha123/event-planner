@@ -2,6 +2,26 @@
 
 **Last updated:** 2026-10-23
 
+### Follow-up — event creation screen and populated wedding plan — 2026-10-23
+
+- Added Admin/Manager event creation to the Events screen, which previously
+  exposed only edit/archive controls even though the documented create API was
+  available. Event count now updates immediately, and descriptions are visible
+  in the event list.
+- In the signed-in local wedding workspace, created four draft events
+  (Mehendi, Sangeet, wedding ceremony, and reception) around the saved wedding
+  date. No venue or address was invented; descriptions mark the schedule as
+  tentative and ask the family to confirm timing and venue details.
+- Updated the existing photographer task with actionable details and linked it
+  to the ceremony. Added three assigned, event-linked planning tasks for venue
+  confirmation, Sangeet production, and the ceremony run-of-show, plus one
+  reception planning task.
+- Validation: ESLint, TypeScript, and `git diff --check` passed. Browser
+  verification confirmed the four events and five tasks persisted after
+  navigation/reload and appeared in the dashboard summary (4 events, 5 open
+  tasks). These records are real workspace data; dates, venues, and plans still
+  need family confirmation.
+
 ### Follow-up — task management and dashboard — 2026-10-23
 
 - Added the wedding-scoped `tasks` collection and indexes, validated CRUD APIs,
