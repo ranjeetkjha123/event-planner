@@ -11,6 +11,11 @@
   filter, assign, and delete tasks. Viewers can read tasks but cannot change
   them. The dashboard now shows task completion progress and up to five tasks
   due today or later, using the wedding time zone.
+- Reworked the signed-in dashboard to follow the Stitch dashboard preview and
+  PRD command-center structure: planning sidebar, wedding countdown, summary
+  cards, upcoming events, and task progress. Guest, RSVP, and expense cards are
+  clearly marked unavailable until those modules exist; no sample counts or
+  budget calculations are presented as live wedding data.
 - Updated same-origin verification to respect the request Host and forwarded
   protocol, so local `localhost` and `127.0.0.1` origins both pass when matched.
 - Validation: 19 focused tests passed, ESLint and TypeScript passed, and
@@ -19,6 +24,9 @@
   rejection. Signed-in Admin QA verified login, task screen rendering, create,
   readback, edit/complete, dashboard summary rendering, delete, and cleanup
   against MongoDB. The temporary QA task was confirmed absent after deletion.
+  The redesigned dashboard returned 200 in a signed-in render check, showed the
+  real planning sections and unavailable-module labels, and omitted sample
+  budget values. ESLint and TypeScript checks passed after the layout update.
 - Documentation note: `API_DESIGN.md` contains an older note calling task API
   behavior implemented, but the prior checkout had no task module or routes.
   Its contract was followed; that older status wording does not prove prior
