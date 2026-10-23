@@ -34,7 +34,7 @@ type WeddingDashboardProps = {
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: "▦", active: true },
   { label: "Events", href: "/events", icon: "◷" },
-  { label: "Guests", icon: "♧", soon: true },
+  { label: "Guests", href: "/guests", icon: "♧" },
   { label: "Tasks", href: "/tasks", icon: "✓" },
   { label: "Shopping", icon: "◇", soon: true },
   { label: "Expenses", icon: "₹", soon: true },
@@ -108,7 +108,7 @@ export function WeddingDashboard({ wedding, userName, events, taskSummary, saved
         <section className="wedding-countdown-card" aria-label="Wedding date countdown"><div><p className="dashboard-section-label">YOUR WEDDING DAY</p><strong>{weddingDateLabel(wedding.weddingDate)}{wedding.location.formattedAddress ? ` · ${wedding.location.formattedAddress}` : ""}</strong></div><div className="wedding-countdown-number"><strong>{Math.abs(days)}</strong><span>{days < 0 ? "days since" : days === 0 ? "today" : "days to go"}</span></div></section>
         <section className="wedding-dashboard-metrics" aria-label="Wedding planning summary">
           <article className="wedding-metric-card"><span>EVENTS</span><strong>{events.length}</strong><small>{events.length === 1 ? "celebration" : "celebrations"}</small></article>
-          <article className="wedding-metric-card metric-unavailable"><span>GUESTS</span><strong>—</strong><small>Guest planning coming soon</small></article>
+          <a className="wedding-metric-card metric-unavailable" href="/guests"><span>GUESTS</span><strong>—</strong><small>Manage guest list</small></a>
           <article className="wedding-metric-card metric-unavailable"><span>CONFIRMED</span><strong>—</strong><small>RSVP tracking coming soon</small></article>
           <article className="wedding-metric-card metric-unavailable"><span>EXPENSES</span><strong>—</strong><small>Expense tracking coming soon</small></article>
           <article className="wedding-metric-card"><span>TASKS</span><strong>{remainingTasks}</strong><small>to complete · {taskSummary.completed} done</small></article>
@@ -122,7 +122,7 @@ export function WeddingDashboard({ wedding, userName, events, taskSummary, saved
             {taskSummary.upcoming.length > 0 && <><h3 className="dashboard-next-tasks-title">Coming up</h3><ul className="dashboard-next-tasks">{taskSummary.upcoming.slice(0, 3).map((task) => <li key={task.id}><span><strong>{task.title}</strong><small>{task.assignee?.name ?? "Unassigned"}{task.event ? ` · ${task.event.name}` : ""}</small></span><time dateTime={task.dueDate ?? undefined}>{task.dueDate ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeZone: wedding.timeZone }).format(new Date(task.dueDate)) : "No due date"}</time></li>)}</ul></>}
           </section>
         </div>
-        <p className="wedding-dashboard-note">Guest, RSVP, and expense details will appear here when those planning areas are available.</p>
+        <p className="wedding-dashboard-note">RSVP and expense details will appear here when those planning areas are available.</p>
       </div>
     </main>
   </div>;

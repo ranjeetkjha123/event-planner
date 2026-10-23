@@ -2,6 +2,35 @@
 
 **Last updated:** 2026-10-23
 
+### Follow-up — guest list foundation — 2026-10-23
+
+- Added wedding-scoped guest records with validated create, list, read, update,
+  and delete APIs. Admins and Managers can manage records; Viewers can read
+  them. Guest-to-event associations are restricted to active events in the
+  same wedding, and API responses do not expose invitation tokens.
+- Added `/guests` with search, RSVP/event filters, paging, guest household
+  details, party limits, event selection, and create/edit/remove controls. Added
+  the Guests navigation entry to the workspace and dashboard.
+- Scope limitation: this increment stores guest planning records only. It does
+  not send invitations, provide public RSVP links, or change the dashboard's
+  unavailable Guest/Confirmed metrics. Those require the next invitation and
+  RSVP increment. The documented API design contains an older implementation
+  note for guest features; this checkout previously had no guest module or
+  routes, so that note does not describe the code that was present here.
+- Validation: ESLint and TypeScript (`--incremental false`) passed; all 23
+  automated tests passed with Node 24.22.1. Localhost Admin QA created a
+  disposable guest, confirmed it persisted after reload, edited it, confirmed
+  the update, and deleted it; a fresh page load showed an empty list. This
+  exposed and fixed a capacity-guard bug for guests whose RSVP attendance count
+  is null. The dashboard's Guest card now links to the list.
+- Task QA: on localhost, created a disposable task, confirmed it appeared in
+  the task list, edited and reloaded it, and confirmed it was absent after a
+  fresh list load following deletion/cleanup. The normal five wedding tasks
+  remained. No production deployment was checked.
+- Remaining: verify Viewer write denial and cross-wedding isolation; add
+  invitation sending and guest RSVP flows; then connect
+  guest counts to the dashboard after RSVP data is available.
+
 ### Follow-up — event creation screen and populated wedding plan — 2026-10-23
 
 - Added Admin/Manager event creation to the Events screen, which previously
